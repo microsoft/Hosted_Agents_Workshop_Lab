@@ -1,0 +1,71 @@
+name: Markdown Link Check (PR)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/workflows/markdown-links.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markdown-links-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-links:
+    name: Check Markdown Links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Validate local markdown links
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Scanning markdown files for local link validity..."
+
+          # Find all markdown files, excluding node_modules and .git
+          md_files=$(find . -type f -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*")
+
+          broken=0
+
+          for md_file in $md_files; do
+            # Extract markdown links: [text](target)
+            # Match targets that don't start with http/https/mailto/javascript or are anchor-only
+            grep -oP '\[.+?\]\(\K[^)]+(?=\))' "$md_file" | while read -r target; do
+              # Skip external/special links
+              if [[ "$target" =~ ^(https?://|mailto:|javascript:|#) ]]; then
+                continue
+              fi
+
+              # Strip anchor and query string
+              target_path="${target%%[#?]*}"
+
+              # Skip if empty after stripping
+              if [ -z "$target_path" ]; then
+                continue
+              fi
+
+              # Resolve relative path
+              resolved=$(cd "$(dirname "$md_file")" && realpath "$target_path" 2>/dev/null || echo "")
+
+              if [ -z "$resolved" ] || [ ! -e "$resolved" ]; then
+                echo "❌ BROKEN: $md_file -> $target"
+                ((broken++))
+              fi
+            done
+          done
+
+          if [ $broken -gt 0 ]; then
+            echo ""
+            echo "Found $broken broken local link(s)."
+            exit 1
+          else
+            echo "✓ All local markdown links are valid."
+          fi
