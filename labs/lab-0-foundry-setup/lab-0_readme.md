@@ -4,7 +4,7 @@
 
 **Time:** 25 minutes
 
-**You will need:** .NET 10, Azure CLI, and access to an Azure AI Foundry project.
+**You will need:** .NET 10, Azure CLI, and access to a Microsoft Foundry project.
 
 ## Steps
 

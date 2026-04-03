@@ -8,9 +8,9 @@ You will start by getting the environment ready and running the agent locally, t
 
 Before you begin the labs, make sure the learner has access to the accounts, tools, and permissions the workshop assumes.
 
-- An Azure subscription. A trial subscription is fine if it can create and use Azure AI Foundry resources, or you can bring your own subscription.
+- An Azure subscription. A trial subscription is fine if it can create and use Microsoft Foundry resources, or you can bring your own subscription.
 - Permission to sign in to Azure CLI and Azure Developer CLI with the account you will use for the workshop.
-- Sufficient Azure access to work with the target resource group and Azure AI Foundry project. At minimum, the learner should be able to view resources, use the project endpoint, and deploy or use a chat model.
+- Sufficient Azure access to work with the target resource group and Microsoft Foundry project. At minimum, the learner should be able to view resources, use the project endpoint, and deploy or use a chat model.
 - A GitHub account, since later labs use GitHub Actions and repository-based workflow automation.
 - Permission to create or update GitHub Actions workflows in the repo you are using for the workshop.
 

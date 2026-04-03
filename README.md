@@ -27,7 +27,7 @@ This repository demonstrates three distinct stages:
 
 - local and CI validation inside the repo
 - Azure resource provisioning and image publishing for deployment readiness
-- Azure AI Foundry control-plane deployment as an explicit separate step
+- Microsoft Foundry control-plane deployment as an explicit separate step
 
 That split is intentional. `azd` provisions the Azure resource group and Azure Container Registry, GitHub Actions can publish the agent image to ACR, and the final Foundry agent create or update step remains explicit because it depends on your real project endpoint, manifest values, and hosted-agent lifecycle controls.
 
@@ -47,13 +47,13 @@ These tools make the scenario useful for teams who are evaluating or onboarding 
 
 Before working through the workshop, make sure you have the accounts, access, and tools the labs assume.
 
-- An Azure subscription. A trial subscription is fine if it can create and use Azure AI Foundry resources, or you can bring your own subscription.
+- An Azure subscription. A trial subscription is fine if it can create and use Microsoft Foundry resources, or you can bring your own subscription.
 - Permission to sign in with Azure CLI and Azure Developer CLI using the account that will run the workshop.
 - Sufficient Azure access to the target subscription and resource group. At minimum, you should be able to provision workshop resources, use the Foundry project endpoint, and deploy or use a chat model.
 - A GitHub account, since the later labs use repository workflows and GitHub Actions.
 - Permission to create or update GitHub Actions workflows and repository settings in the repo used for the workshop.
 
-If you are using a shared enterprise environment, make sure you know in advance which subscription, resource group, Azure AI Foundry project, and model deployment you are expected to use.
+If you are using a shared enterprise environment, make sure you know in advance which subscription, resource group, Microsoft Foundry project, and model deployment you are expected to use.
 
 ## Getting Started
 
@@ -111,7 +111,7 @@ Use this section if you want to prove the app works locally before starting the 
 - .NET 10 SDK
 - Azure CLI
 - Azure Developer CLI (`azd`)
-- Access to an Azure AI Foundry project
+- Access to a Microsoft Foundry project
 - A deployed chat model in that project
 
 ### Environment Variables
