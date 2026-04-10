@@ -22,4 +22,4 @@ USER appuser
 
 EXPOSE 8088
 
-ENTRYPOINT ["uv", "run", "python", "-m", "src.workshop_lab_agent_host.main"]
+ENTRYPOINT ["uv", "run", "python", "src/workshop_lab_agent_host/main.py"]

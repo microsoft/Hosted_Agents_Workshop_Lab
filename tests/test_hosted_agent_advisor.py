@@ -34,6 +34,17 @@ class TestRecommendImplementationShape:
         )
         assert "Recommended implementation: Prompt agent" in result
 
+    def test_returns_full_platform_when_all_three_required(self, advisor):
+        result = advisor.recommend_implementation_shape(
+            goal="Enterprise agent with APIs, tools, and orchestration",
+            needs_custom_code="yes",
+            needs_external_tools="yes",
+            needs_workflow="yes",
+        )
+        assert "Recommended implementation: Hosted agent (full platform)" in result
+        assert "full-platform hosted agent use case" in result
+        assert "modular tool layer" in result
+
 
 class TestBuildLaunchChecklist:
     def test_includes_core_hosted_agent_steps(self, advisor):

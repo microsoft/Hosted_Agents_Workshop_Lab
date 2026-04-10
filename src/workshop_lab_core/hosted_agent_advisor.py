@@ -15,26 +15,36 @@ class HostedAgentAdvisor:
         requires_tools = _is_affirmative(needs_external_tools)
         requires_workflow = _is_affirmative(needs_workflow)
 
+        all_three = requires_code and requires_tools and requires_workflow
+
         recommendation = (
-            "Hosted agent"
+            "Hosted agent (full platform)"
+            if all_three
+            else "Hosted agent"
             if requires_code or requires_tools or requires_workflow
             else "Prompt agent"
         )
 
         reasons: list[str] = []
 
-        if requires_code:
+        if all_three:
             reasons.append(
-                "custom server-side logic or enterprise integrations are required"
+                "the scenario requires custom code, external tool access, and "
+                "multi-step orchestration — this is a full-platform hosted agent use case"
             )
+        else:
+            if requires_code:
+                reasons.append(
+                    "custom server-side logic or enterprise integrations are required"
+                )
 
-        if requires_tools:
-            reasons.append("tool access or MCP connectivity is required")
+            if requires_tools:
+                reasons.append("tool access or MCP connectivity is required")
 
-        if requires_workflow:
-            reasons.append(
-                "the scenario benefits from multi-step orchestration"
-            )
+            if requires_workflow:
+                reasons.append(
+                    "the scenario benefits from multi-step orchestration"
+                )
 
         if not reasons:
             reasons.append(
@@ -43,7 +53,11 @@ class HostedAgentAdvisor:
             )
 
         next_step = (
-            "Suggested next step: create a code-based hosted agent with local tools "
+            "Suggested next step: design the agent with a modular tool layer, "
+            "separate orchestration logic, and an MCP integration plan. Validate "
+            "the /responses contract locally before adding external connections."
+            if all_three
+            else "Suggested next step: create a code-based hosted agent with local tools "
             "first, then add project-specific connections once the /responses contract "
             "works locally."
             if recommendation == "Hosted agent"
