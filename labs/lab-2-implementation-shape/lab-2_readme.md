@@ -8,18 +8,18 @@
 
 ## Steps
 
-1. Open `src/WorkshopLab.Core/HostedAgentAdvisor.cs`.
+1. Open `src/workshop_lab_core/hosted_agent_advisor.py`.
 2. Review the existing tools:
-   - `RecommendImplementationShape`
-   - `BuildLaunchChecklist`
-   - `TroubleshootHostedAgent`
+   - `recommend_implementation_shape`
+   - `build_launch_checklist`
+   - `troubleshoot_hosted_agent`
 3. Pick one tool to improve. Suggested option: add a stronger recommendation path for scenarios that require custom code, tool access, and workflow orchestration at the same time.
 4. Update the deterministic logic in `HostedAgentAdvisor`.
-5. Add or update tests in `tests/WorkshopLab.Tests/HostedAgentAdvisorTests.cs`.
+5. Add or update tests in `tests/test_hosted_agent_advisor.py`.
 6. Run:
 
    ```powershell
-   dotnet test
+   uv run pytest tests/ -v
    ```
 
 7. Start the hosted agent locally.

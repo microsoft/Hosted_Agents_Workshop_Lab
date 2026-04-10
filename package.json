@@ -1,7 +1,7 @@
 {
   "name": "workshop_lab",
   "version": "1.0.0",
-  "description": "This repository is a beginner-friendly workshop for building a Microsoft Foundry Hosted Agent with .NET 10.",
+  "description": "This repository is a beginner-friendly workshop for building a Microsoft Foundry Hosted Agent with Python.",
   "main": "index.js",
   "directories": {
     "test": "tests"

@@ -1,6 +1,6 @@
 # Lab Instructions
 
-These labs walk you through building, testing, deploying, and integrating a Microsoft Foundry Hosted Agent.
+These labs walk you through building, testing, deploying, and integrating a Microsoft Foundry Hosted Agent using Python.
 
 You will start by getting the environment ready and running the agent locally, then move through Copilot customization, implementation work, CI validation, deployment, and UI integration.
 

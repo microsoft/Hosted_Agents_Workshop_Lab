@@ -1,6 +1,6 @@
 # Workshop Lab for Microsoft Foundry Hosted Agents
 
-This repository is a beginner-friendly workshop for building a Microsoft Foundry Hosted Agent with .NET 10.
+This repository is a beginner-friendly workshop for building a Microsoft Foundry Hosted Agent with Python.
 
 If you are new to Microsoft Foundry hosted agents, follow the labs in order from Lab 0 to Lab 5. Each lab builds on the previous lab and keeps commands copy-paste ready.
 
@@ -35,11 +35,11 @@ That split is intentional. `azd` provisions the Azure resource group and Azure C
 
 You build a code-based hosted agent that exposes the OpenAI Responses-compatible `/responses` endpoint on port `8088`.
 
-The agent uses deterministic local tools backed by `WorkshopLab.Core`:
+The agent uses deterministic local tools backed by `workshop_lab_core`:
 
-- `RecommendImplementationShape`
-- `BuildLaunchChecklist`
-- `TroubleshootHostedAgent`
+- `recommend_implementation_shape`
+- `build_launch_checklist`
+- `troubleshoot_hosted_agent`
 
 These tools make the scenario useful for teams who are evaluating or onboarding to Microsoft Foundry Hosted Agents.
 
@@ -92,14 +92,13 @@ For the full lab guide, see [labs/README.md](labs/README.md).
 
 ```text
 .
-├── .devcontainer/              # Codespaces/dev container configuration
-├── .github/workflows/         # CI and deployment-oriented workflows
 ├── labs/                      # Guided labs in sequential order
 ├── src/
-│   ├── WorkshopLab.AgentHost/ # Hosted agent entrypoint, Dockerfile, agent.yaml
-│   └── WorkshopLab.Core/      # Deterministic domain logic used by the agent tools
-├── tests/WorkshopLab.Tests/   # xUnit tests for the deterministic core logic
-└── WorkshopLab.sln
+│   ├── workshop_lab_agent_host/ # Hosted agent entrypoint (FastAPI), Dockerfile, agent.yaml
+│   ├── workshop_lab_chat_ui/    # Flask chat UI for the deployed agent
+│   └── workshop_lab_core/       # Deterministic domain logic used by the agent tools
+├── tests/                     # pytest tests for the deterministic core logic
+└── pyproject.toml
 ```
 
 ## Quick Start
@@ -108,7 +107,7 @@ Use this section if you want to prove the app works locally before starting the 
 
 ### Required Tools
 
-- .NET 10 SDK
+- [uv](https://docs.astral.sh/uv/) (Python package manager — installs Python 3.12 automatically)
 - Azure CLI
 - Azure Developer CLI (`azd`)
 - Access to a Microsoft Foundry project
@@ -121,23 +120,31 @@ The agent host expects:
 - `AZURE_AI_PROJECT_ENDPOINT`
 - `MODEL_DEPLOYMENT_NAME`
 
-Example PowerShell session:
+**Windows (PowerShell):**
 
 ```powershell
 $env:AZURE_AI_PROJECT_ENDPOINT = "https://<resource>.services.ai.azure.com/api/projects/<project>"
 $env:MODEL_DEPLOYMENT_NAME = "gpt-4.1-mini"
 ```
 
+**macOS / Linux:**
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+export MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+```
+
 ### Run Locally
 
-```powershell
-dotnet restore
-dotnet build
-dotnet test
-dotnet run --project src/WorkshopLab.AgentHost
+```
+uv sync
+uv run pytest tests/ -v
+uv run python src/workshop_lab_agent_host/main.py
 ```
 
 Then send a local request:
+
+**Windows (PowerShell):**
 
 ```powershell
 $body = @{
@@ -146,6 +153,14 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri http://localhost:8088/responses -Method Post -Body $body -ContentType "application/json"
+```
+
+**macOS / Linux:**
+
+```bash
+curl -X POST http://localhost:8088/responses \
+  -H "Content-Type: application/json" \
+  -d '{"input":"We need an internal agent that uses private APIs and workflow handoffs. Should we start with a hosted agent?","stream":false}'
 ```
 
 ## Azure Provisioning With azd
@@ -207,7 +222,7 @@ The workflow does not create or start the Microsoft Foundry hosted agent. That r
 
 Use this step after the image is available in ACR.
 
-Use the helper project in [src/WorkshopLab.FoundryDeployment/Program.cs](src/WorkshopLab.FoundryDeployment/Program.cs) or the wrapper script in [scripts/deploy-foundry-agent.ps1](scripts/deploy-foundry-agent.ps1) to call the Microsoft Foundry manifest APIs explicitly.
+Use the helper script in [scripts/deploy_foundry_agent.py](scripts/deploy_foundry_agent.py) or the wrapper script in [scripts/deploy-foundry-agent.ps1](scripts/deploy-foundry-agent.ps1) to call the Microsoft Foundry manifest APIs explicitly.
 
 Example:
 
@@ -234,10 +249,10 @@ The helper intentionally stops after manifest create or update. Until the hosted
 This workshop separates deployment into a few clear stages so beginners can understand what happens where.
 
 - Azure prerequisites are explicit: Azure CLI auth, a Microsoft Foundry project endpoint, and a deployed chat model.
-- The hosted agent contract is explicit in [src/WorkshopLab.AgentHost/agent.yaml](src/WorkshopLab.AgentHost/agent.yaml): `kind: hosted`, `responses` protocol, and environment-variable placeholders.
+- The hosted agent contract is explicit in [src/workshop_lab_agent_host/agent.yaml](src/workshop_lab_agent_host/agent.yaml): `kind: hosted`, `responses` protocol, and environment-variable placeholders.
 - Azure provisioning is explicit in [azure.yaml](azure.yaml) and [infra/main.bicep](infra/main.bicep): provision the Azure resource group path and Azure Container Registry with azd.
 - CI publishing is explicit in [.github/workflows/deploy.yml](.github/workflows/deploy.yml): build a timestamped Linux AMD64 image and publish it to ACR with `az acr build`.
-- Microsoft Foundry manifest deployment is explicit in [src/WorkshopLab.FoundryDeployment/Program.cs](src/WorkshopLab.FoundryDeployment/Program.cs): create or update the hosted agent from manifest as a separate control-plane step.
+- Microsoft Foundry manifest deployment is explicit in [scripts/deploy_foundry_agent.py](scripts/deploy_foundry_agent.py): create or update the hosted agent from manifest as a separate control-plane step.
 - The remaining hosted-agent lifecycle operations are environment-dependent: start the container, verify status, and test the deployed agent.
 
 That matches the Microsoft Foundry deploy skill workflow for hosted agents:

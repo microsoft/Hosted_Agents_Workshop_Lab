@@ -2,9 +2,10 @@
   "name": "Workshop Lab Hosted Agents",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/devcontainers/features/dotnet:2": {
-      "version": "10.0"
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
     },
+    "ghcr.io/devcontainers-contrib/features/uv:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "customizations": {
@@ -12,7 +13,7 @@
       "extensions": [
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "ms-dotnettools.csdevkit",
+        "ms-python.python",
         "ms-azuretools.vscode-azurecli"
       ],
       "settings": {
@@ -21,5 +22,5 @@
     }
   },
   "forwardPorts": [8088],
-  "postCreateCommand": "dotnet restore"
+  "postCreateCommand": "uv sync"
 }

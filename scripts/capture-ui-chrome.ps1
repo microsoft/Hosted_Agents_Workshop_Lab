@@ -1,5 +1,6 @@
 param(
     [string]$AppUrl = "http://localhost:5075",
+    # Note: Flask Chat UI runs on port 5075 by default
     [string]$ScreenshotDir = "labs/lab-5-ui/images",
     [int]$Width = 1920,
     [int]$Height = 1080,

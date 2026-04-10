@@ -1,0 +1,79 @@
+/* Base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1e293b; }
+
+/* Layout */
+.page { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+
+.sidebar { background: #1e293b; color: white; padding: 1.5rem 1rem; }
+.sidebar .brand { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; }
+.sidebar .nav-link { display: block; color: #94a3b8; text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; }
+.sidebar .nav-link.active, .sidebar .nav-link:hover { color: white; background: #334155; }
+
+main { display: flex; flex-direction: column; }
+.top-row { display: flex; justify-content: flex-end; padding: 0.75rem 1.5rem; background: white; border-bottom: 1px solid #e2e8f0; }
+.top-row a { color: #0f766e; text-decoration: none; font-weight: 500; }
+
+.content { padding: 2rem 1.5rem; }
+.content h1 { margin-bottom: 0.5rem; }
+.content p { margin-bottom: 1rem; color: #64748b; }
+
+/* Chat */
+.chat-shell { display: grid; gap: 1rem; max-width: 920px; }
+
+.chat-log {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    min-height: 320px;
+    max-height: 520px;
+    overflow: auto;
+    padding: 1rem;
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+}
+
+.chat-item { padding: 0.75rem; border-radius: 10px; line-height: 1.4; }
+.chat-item.user { background: #dbeafe; border: 1px solid #93c5fd; }
+.chat-item.assistant { background: #ecfdf5; border: 1px solid #6ee7b7; }
+
+.role { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem; }
+.text { white-space: pre-wrap; }
+
+.composer { display: grid; gap: 0.5rem; }
+.composer textarea {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #94a3b8;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: vertical;
+}
+.composer button {
+    width: fit-content;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    background: #0f766e;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.composer button:disabled { background: #64748b; cursor: not-allowed; }
+
+.error {
+    color: #991b1b;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 0.6rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+}

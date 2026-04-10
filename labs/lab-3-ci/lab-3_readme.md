@@ -9,15 +9,15 @@
 ## Steps
 
 1. Open `.github/workflows/ci.yml`.
-2. Verify the workflow restores, builds, and tests the solution.
+2. Verify the workflow installs Python dependencies and runs pytest.
 3. Add a Docker build step that validates the agent container definition:
 
    ```yaml
    - name: Build hosted agent container
-     run: docker build --platform linux/amd64 -t workshoplab-agent -f ./src/WorkshopLab.AgentHost/Dockerfile ./src
+     run: docker build --platform linux/amd64 -t workshoplab-agent -f ./src/workshop_lab_agent_host/Dockerfile .
    ```
 
-   > **Important:** The build context must be `./src` (not `./src/WorkshopLab.AgentHost`) because the Dockerfile copies both `WorkshopLab.Core` and `WorkshopLab.AgentHost`. The `--file` flag points to the Dockerfile explicitly.
+   > **Important:** The build context must be `.` (the repo root) because the Dockerfile copies `pyproject.toml`, `uv.lock`, and the `src/` packages. The `--file` flag points to the Dockerfile explicitly.
 
 4. Ensure the workflow triggers on:
    - `workflow_dispatch`

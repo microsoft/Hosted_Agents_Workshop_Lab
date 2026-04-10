@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hosted Agent Chat UI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body>
+    <div class="page">
+        <nav class="sidebar">
+            <div class="brand">WorkshopLab ChatUI</div>
+            <a href="/" class="nav-link active">Home</a>
+        </nav>
+        <main>
+            <div class="top-row">
+                <a href="https://learn.microsoft.com/azure/foundry/" target="_blank">About</a>
+            </div>
+            <article class="content">
+                <h1>Hosted Agent Chat UI</h1>
+                <p>Use this page to send real prompts to your deployed Foundry hosted agent.</p>
+
+                <div class="chat-shell">
+                    <div class="chat-log" id="chatLog">
+                        <div class="chat-item assistant">
+                            <div class="role">ASSISTANT</div>
+                            <div class="text">Ready. Ask me whether your scenario should use a hosted agent.</div>
+                        </div>
+                    </div>
+
+                    <div class="composer">
+                        <textarea id="promptInput" rows="4"
+                            placeholder="Ask your hosted agent about implementation shape, readiness, or troubleshooting...">We are onboarding a team to Microsoft Foundry hosted agents. We need private API access, a repeatable deployment process, and a launch checklist for production readiness. Should we use a hosted agent for this scenario, and what implementation shape do you recommend?</textarea>
+                        <button id="sendBtn" onclick="sendPrompt()">Send Prompt</button>
+                    </div>
+
+                    <div class="error" id="errorBox" style="display:none;"></div>
+                </div>
+            </article>
+        </main>
+    </div>
+
+    <script>
+        const chatLog = document.getElementById('chatLog');
+        const promptInput = document.getElementById('promptInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const errorBox = document.getElementById('errorBox');
+        let isSending = false;
+
+        function addMessage(isUser, role, text) {
+            const div = document.createElement('div');
+            div.className = 'chat-item ' + (isUser ? 'user' : 'assistant');
+            div.innerHTML = '<div class="role">' + role + '</div><div class="text"></div>';
+            div.querySelector('.text').textContent = text;
+            chatLog.appendChild(div);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        async function sendPrompt() {
+            if (isSending) return;
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            errorBox.style.display = 'none';
+            addMessage(true, 'YOU', prompt);
+            promptInput.value = '';
+            isSending = true;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            try {
+                const resp = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const data = await resp.json();
+                if (data.error) {
+                    errorBox.textContent = data.error;
+                    errorBox.style.display = 'block';
+                } else {
+                    addMessage(false, 'ASSISTANT', data.reply);
+                }
+            } catch (err) {
+                errorBox.textContent = err.message;
+                errorBox.style.display = 'block';
+            } finally {
+                isSending = false;
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Prompt';
+            }
+        }
+
+        promptInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                sendPrompt();
+            }
+        });
+    </script>
+</body>
+</html>

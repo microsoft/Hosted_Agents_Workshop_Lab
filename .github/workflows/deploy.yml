@@ -16,7 +16,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/deploy.yml
-      - src/WorkshopLab.AgentHost/**
+      - src/workshop_lab_agent_host/**
       - azure.yaml
       - infra/**
 
@@ -39,18 +39,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
-        with:
-          dotnet-version: "10.0.x"
+      - uses: astral-sh/setup-uv@v4
 
-      - name: Restore
-        run: dotnet restore WorkshopLab.sln
-
-      - name: Build
-        run: dotnet build WorkshopLab.sln --no-restore
+      - name: Install dependencies
+        run: uv sync
 
       - name: Test
-        run: dotnet test WorkshopLab.sln --no-build --verbosity normal
+        run: uv run pytest tests/ -v
 
       - name: Validate ACR configuration
         shell: bash
@@ -84,8 +79,8 @@ jobs:
             --image "$IMAGE_REPOSITORY:${{ steps.image.outputs.tag }}" \
             --platform linux/amd64 \
             --source-acr-auth-id "[caller]" \
-            --file src/WorkshopLab.AgentHost/Dockerfile \
-            ./src/WorkshopLab.AgentHost
+            --file src/workshop_lab_agent_host/Dockerfile \
+            .
 
       - name: Summarize published image
         shell: bash

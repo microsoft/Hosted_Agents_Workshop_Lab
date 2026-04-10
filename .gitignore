@@ -12,6 +12,16 @@ node_modules/
 .idea/
 Thumbs.db
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
 # Local debug/test output files
 agent_raw.json
 agent_response.txt

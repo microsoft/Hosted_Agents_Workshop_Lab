@@ -1,0 +1,26 @@
+[project]
+name = "workshop-lab"
+version = "1.0.0"
+description = "Beginner workshop for building a Microsoft Foundry Hosted Agent with Python"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "openai>=1.40.0",
+    "azure-identity>=1.17.0",
+    "flask>=3.0.0",
+    "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+deploy = [
+    "pyyaml>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

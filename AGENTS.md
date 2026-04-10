@@ -4,7 +4,7 @@ This file defines repository-level guidance for coding agents and contributors.
 
 ## Repository Purpose
 
-This repo is a beginner workshop for Microsoft Foundry hosted agents with .NET 10.
+This repo is a beginner workshop for Microsoft Foundry hosted agents with Python.
 
 Primary learning flow:
 
@@ -34,13 +34,14 @@ Primary learning flow:
 
 ## Code and Build Rules
 
-- Target framework is .NET 10.
-- Keep deterministic business logic in `src/WorkshopLab.Core`.
-- Keep hosted agent host behavior in `src/WorkshopLab.AgentHost`.
+- Python 3.12+ is the target runtime.
+- Use `uv` for dependency management. Dependencies are declared in `pyproject.toml` and locked in `uv.lock`.
+- Keep deterministic business logic in `src/workshop_lab_core`.
+- Keep hosted agent host behavior in `src/workshop_lab_agent_host`.
 - Run tests when changing core logic:
 
 ```powershell
-dotnet test WorkshopLab.sln
+uv run pytest tests/ -v
 ```
 
 ## UI Screenshot Workflow
@@ -50,7 +51,7 @@ When UI images need refresh for docs:
 1. Start the app:
 
 ```powershell
-dotnet run --project src/WorkshopLab.ChatUI --urls http://localhost:5075
+uv run python src/workshop_lab_chat_ui/app.py
 ```
 
 2. In another terminal, run screenshot capture:
@@ -71,5 +72,5 @@ Before publishing updates:
 
 - No hardcoded personal tenant IDs, subscription IDs, or project endpoints
 - No hardcoded personal ACR names
-- `.gitignore` includes local-only artifacts (for example `node_modules/`, local logs, debug outputs)
+- `.gitignore` includes local-only artifacts (for example `node_modules/`, `.venv/`, `__pycache__/`, local logs, debug outputs)
 - Beginner docs still read top-to-bottom without hidden assumptions

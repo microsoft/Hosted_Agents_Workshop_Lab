@@ -10,34 +10,48 @@
 
 ## Step 1: Open the New UI Project
 
-Open `src/WorkshopLab.ChatUI` in VS Code and review:
+Open `src/workshop_lab_chat_ui` in VS Code and review:
 
-- `Program.cs` - app startup and service registration
-- `Components/Pages/Home.razor` - chat interface
-- `Services/FoundryAgentClient.cs` - Foundry API call logic
+- `app.py` - Flask app startup, routes, and Foundry API call logic
+- `templates/index.html` - chat interface
+- `static/app.css` - UI styles
 
-This project is a Blazor Web App that runs locally and forwards prompts to your deployed hosted agent.
+This project is a Flask web application that runs locally and forwards prompts to your deployed hosted agent.
 
 ---
 
 ## Step 2: Configure Foundry Settings
 
-Set the Foundry endpoint and target agent name in `src/WorkshopLab.ChatUI/appsettings.Development.json`:
+Set the Foundry endpoint and target agent name via environment variables:
 
-```json
-{
-  "Foundry": {
-    "ProjectEndpoint": "https://<account>.services.ai.azure.com/api/projects/<project>",
-    "AgentName": "hosted-agent-readiness-coach",
-    "ApiVersion": "2025-01-01-preview"
-  }
-}
+**Windows (PowerShell):**
+
+```powershell
+$env:FOUNDRY_PROJECT_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
+$env:FOUNDRY_AGENT_NAME = "hosted-agent-readiness-coach"
+$env:FOUNDRY_API_VERSION = "2025-01-01-preview"
 ```
 
-You can also provide the endpoint through environment variables:
+**macOS / Linux:**
+
+```bash
+export FOUNDRY_PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
+export FOUNDRY_AGENT_NAME="hosted-agent-readiness-coach"
+export FOUNDRY_API_VERSION="2025-01-01-preview"
+```
+
+Alternatively, you can use `AZURE_AI_PROJECT_ENDPOINT`:
+
+**Windows (PowerShell):**
 
 ```powershell
 $env:AZURE_AI_PROJECT_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
+```
+
+**macOS / Linux:**
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
 ```
 
 ---
@@ -65,11 +79,10 @@ az account set --subscription "<subscription-id-or-name>"
 From the repository root:
 
 ```powershell
-dotnet restore
-dotnet run --project src/WorkshopLab.ChatUI
+uv run python src/workshop_lab_chat_ui/app.py
 ```
 
-Open the URL shown by ASP.NET Core (for example, `https://localhost:7xxx`).
+Open `http://localhost:5075` in your browser.
 
 ### Reference screenshot: landing state
 
@@ -120,7 +133,7 @@ Use this as a quick visual check that the app renders correctly in full-screen d
 If you want to refresh all three screenshots after UI updates, run:
 
 ```powershell
-dotnet run --project src/WorkshopLab.ChatUI --urls http://localhost:5075
+uv run python src/workshop_lab_chat_ui/app.py
 ```
 
 In a second terminal:
@@ -141,9 +154,9 @@ This generates:
 
 | Problem | Fix |
 |---|---|
-| `Set Foundry:ProjectEndpoint...` error | Set `Foundry:ProjectEndpoint` in appsettings or `AZURE_AI_PROJECT_ENDPOINT` env var |
+| `AZURE_AI_PROJECT_ENDPOINT` not set error | Set `FOUNDRY_PROJECT_ENDPOINT` or `AZURE_AI_PROJECT_ENDPOINT` env var |
 | `Foundry request failed with 401` | Run `az login` again and confirm tenant/subscription |
-| `Foundry request failed with 404` | Verify `ProjectEndpoint` and `AgentName` values |
+| `Foundry request failed with 404` | Verify endpoint and `FOUNDRY_AGENT_NAME` values |
 | Empty or unexpected response text | Check agent status and inspect raw response in the browser console/network trace |
 
 ---
@@ -153,7 +166,7 @@ This generates:
 You now have a working end-to-end solution:
 
 - Hosted agent deployed in Foundry
-- UI client running locally in Blazor
+- UI client running locally in Flask
 - Real-time prompt/response flow through `openai/v1/responses` with `agent_reference`
 
 This lab completes the full path from implementation and deployment to user-facing experience.

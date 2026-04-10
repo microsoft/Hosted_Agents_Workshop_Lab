@@ -34,8 +34,22 @@ Confirm these requirements before starting:
 
    If the version is below 1.23.0, update it:
 
+   **Windows:**
+
    ```powershell
    winget upgrade Microsoft.Azd
+   ```
+
+   **macOS:**
+
+   ```bash
+   brew upgrade azd
+   ```
+
+   **Linux:**
+
+   ```bash
+   curl -fsSL https://aka.ms/install-azd.sh | bash
    ```
 
 2. Verify Docker Desktop is running:
@@ -57,12 +71,12 @@ Confirm these requirements before starting:
 
 ## Step 2: Review the Agent Definition
 
-1. Open `src/WorkshopLab.AgentHost/agent.yaml` and confirm:
+1. Open `src/workshop_lab_agent_host/agent.yaml` and confirm:
    - `kind: hosted`
    - `protocol: responses` at version `v1`
    - Environment variables `AZURE_AI_PROJECT_ENDPOINT` and `MODEL_DEPLOYMENT_NAME` are listed
 
-2. Open `src/WorkshopLab.AgentHost/Dockerfile` and confirm the multi-stage build uses the .NET 10 Alpine images and targets `linux/amd64`.
+2. Open `src/workshop_lab_agent_host/Dockerfile` and confirm the build uses the Python 3.12 slim image and targets `linux/amd64`.
 
 ---
 
@@ -117,18 +131,29 @@ Before publishing to Azure, confirm the agent works in your local environment.
 
 1. Set the required environment variables for your session:
 
+   **Windows (PowerShell):**
+
    ```powershell
    $env:AZURE_AI_PROJECT_ENDPOINT = "https://<resource>.services.ai.azure.com/api/projects/<project>"
    $env:MODEL_DEPLOYMENT_NAME = "gpt-4.1-mini"
    ```
 
+   **macOS / Linux:**
+
+   ```bash
+   export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+   export MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+   ```
+
 2. Run the hosted agent:
 
    ```powershell
-   dotnet run --project src/WorkshopLab.AgentHost
+   uv run python src/workshop_lab_agent_host/main.py
    ```
 
 3. In a second terminal, send a test request:
+
+   **Windows (PowerShell):**
 
    ```powershell
    Invoke-RestMethod -Method Post `
@@ -137,9 +162,17 @@ Before publishing to Azure, confirm the agent works in your local environment.
        -Body '{"input":"Should we use a hosted agent for our team onboarding workflow?"}'
    ```
 
+   **macOS / Linux:**
+
+   ```bash
+   curl -X POST http://localhost:8088/responses \
+     -H "Content-Type: application/json" \
+     -d '{"input":"Should we use a hosted agent for our team onboarding workflow?"}'
+   ```
+
    You should receive a structured recommendation from the Readiness Coach.
 
-   Alternatively, open `src/WorkshopLab.AgentHost/run-requests.http` and use the VS Code REST Client extension to send the pre-built requests.
+   Alternatively, open `src/workshop_lab_agent_host/run-requests.http` and use the VS Code REST Client extension to send the pre-built requests.
 
 4. Stop the local server with **Ctrl+C**.
 
@@ -158,16 +191,27 @@ If the agent fails to start, check:
 
 Build the agent container and push it to ACR using ACR cloud build (no local daemon push required).
 
-> **Important:** The build context must be `./src` (not just `./src/WorkshopLab.AgentHost`) because the Dockerfile copies both `WorkshopLab.Core` and `WorkshopLab.AgentHost`. Use `--file` to point to the Dockerfile.
+> **Important:** The build context must be `.` (the repo root) because the Dockerfile copies `pyproject.toml`, `uv.lock`, and the `src/` packages. Use `--file` to point to the Dockerfile.
+
+**Windows (PowerShell):**
 
 ```powershell
 $acrName = (azd env get-values | Select-String "AZURE_CONTAINER_REGISTRY_NAME").ToString().Split("=")[1].Trim('"')
 az acr build --registry $acrName --image workshoplab-agent:lab4 --platform linux/amd64 `
-    --file ./src/WorkshopLab.AgentHost/Dockerfile `
-    ./src
+    --file ./src/workshop_lab_agent_host/Dockerfile `
+    .
 ```
 
-> **Note:** The first build takes 3–5 minutes as the base .NET 10 images are downloaded. Subsequent builds are faster.
+**macOS / Linux:**
+
+```bash
+ACR_NAME=$(azd env get-values | grep AZURE_CONTAINER_REGISTRY_NAME | cut -d'=' -f2 | tr -d '"')
+az acr build --registry "$ACR_NAME" --image workshoplab-agent:lab4 --platform linux/amd64 \
+    --file ./src/workshop_lab_agent_host/Dockerfile \
+    .
+```
+
+> **Note:** The first build takes 2–4 minutes as the base Python images are downloaded. Subsequent builds are faster.
 
 When the build completes, note the full image URI shown in the output:
 
@@ -181,9 +225,22 @@ When the build completes, note the full image URI shown in the output:
 
 Deploy the hosted agent definition to your Foundry project using the direct deployment script. Replace `<acr-name>` with the name captured in Step 6:
 
+**Windows (PowerShell):**
+
 ```powershell
 ./scripts/deploy-hosted-agent-direct.ps1 `
     -ImageUri "<acr-name>.azurecr.io/workshoplab-agent:lab4"
+```
+
+**macOS / Linux:**
+
+```bash
+python scripts/deploy_foundry_agent.py \
+    --project-endpoint "$AZURE_AI_PROJECT_ENDPOINT" \
+    --agent-name hosted-agent-readiness-coach \
+    --manifest src/workshop_lab_agent_host/agent.yaml \
+    --set "AZURE_AI_PROJECT_ENDPOINT=$AZURE_AI_PROJECT_ENDPOINT" \
+    --set "chat=$MODEL_DEPLOYMENT_NAME"
 ```
 
 The script creates or updates the hosted agent definition in Foundry with:
@@ -200,6 +257,8 @@ The script creates or updates the hosted agent definition in Foundry with:
 
 After the agent definition is registered, start the container using the Azure CLI:
 
+**Windows (PowerShell):**
+
 ```powershell
 $accountName = "<resource-account-name>"   # e.g. my-foundry-account
 $projectName = "<foundry-project-name>"    # e.g. my-foundry-project
@@ -208,6 +267,23 @@ az cognitiveservices agent start `
     --account-name $accountName `
     --project-name $projectName `
     --name hosted-agent-readiness-coach `
+    --agent-version 1 `
+    --show-logs
+```
+
+**macOS / Linux:**
+
+```bash
+ACCOUNT_NAME="<resource-account-name>"   # e.g. my-foundry-account
+PROJECT_NAME="<foundry-project-name>"    # e.g. my-foundry-project
+
+az cognitiveservices agent start \
+    --account-name "$ACCOUNT_NAME" \
+    --project-name "$PROJECT_NAME" \
+    --name hosted-agent-readiness-coach \
+    --agent-version 1 \
+    --show-logs
+```
     --agent-version 1 `
     --show-logs
 ```
@@ -258,7 +334,7 @@ Use this validation prompt for all verification paths in this step:
 
 ### Verify via VS Code REST Client
 
-1. Open `src/WorkshopLab.AgentHost/run-requests.http`.
+1. Open `src/workshop_lab_agent_host/run-requests.http`.
 2. Go to the **Production requests via Foundry Agent Service** section.
 3. Use the first request, which is prefilled with the validation prompt.
 4. If your REST client requires a token variable, acquire one first:
@@ -273,6 +349,8 @@ Use this validation prompt for all verification paths in this step:
 ### Verify via REST API
 
 Hosted agents are invoked through the OpenAI Responses API with an `agent_reference`. Obtain a bearer token and POST to the project-level endpoint:
+
+**Windows (PowerShell):**
 
 ```powershell
 $projectEndpoint = "https://<account>.services.ai.azure.com/api/projects/<project>"
@@ -289,12 +367,28 @@ Invoke-RestMethod -Method Post `
     -Body $payload
 ```
 
+**macOS / Linux:**
+
+```bash
+PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
+TOKEN=$(az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv)
+
+curl -X POST "$PROJECT_ENDPOINT/openai/v1/responses" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "api-version: 2025-01-01-preview" \
+  -d '{
+    "input": [{"role": "user", "content": "We are onboarding a team to Microsoft Foundry hosted agents. We need private API access, a repeatable deployment process, and a launch checklist for production readiness. Should we use a hosted agent for this scenario, and what implementation shape do you recommend?"}],
+    "agent_reference": {"name": "hosted-agent-readiness-coach", "type": "agent_reference"}
+  }'
+```
+
 Validation checks:
 - the HTTP request succeeds without a 4xx or 5xx response
 - the response object status is `completed`
 - the answer includes both a hosted-agent recommendation and implementation guidance
 
-You can also use the pre-built production requests in `src/WorkshopLab.AgentHost/run-requests.http`.
+You can also use the pre-built production requests in `src/workshop_lab_agent_host/run-requests.http`.
 
 ---
 
@@ -320,7 +414,7 @@ The Foundry project and hosted agent definition remain unless deleted separately
 | `AuthorizationFailed` during provisioning | Request Contributor role on your subscription or resource group |
 | Agent doesn't start locally | Verify environment variables are set and run `az login` to refresh credentials |
 | `AcrPullUnauthorized` error | Grant AcrPull role to the project's managed identity on the container registry |
-| azd version too old | Run `winget upgrade Microsoft.Azd` (Windows) or `brew upgrade azd` (macOS) |
+| azd version too old | Run `winget upgrade Microsoft.Azd` (Windows), `brew upgrade azd` (macOS), or re-run the install script (Linux) |
 | Model not found | Verify the deployment name in Foundry → Build → Deployments matches `MODEL_DEPLOYMENT_NAME` |
 | `azd provision` fails with existing resource group | Choose a unique environment name or delete the existing resource group first |
 
@@ -328,7 +422,7 @@ The Foundry project and hosted agent definition remain unless deleted separately
 
 ## What This Lab Demonstrates
 
-This lab follows the [Microsoft Learn hosted-agent quickstart](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd) adapted for the .NET Agent Framework:
+This lab follows the [Microsoft Learn hosted-agent quickstart](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd) adapted for Python:
 
 - Prerequisite verification before deployment
 - Azure provisioning through `azd` and Bicep (ACR)

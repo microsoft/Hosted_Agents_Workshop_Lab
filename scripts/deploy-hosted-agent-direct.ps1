@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($ModelDeploymentName)) {
     throw "MODEL_DEPLOYMENT_NAME must be set before deploying the hosted agent."
 }
 
-# Create agent definition JSON inline and call the deployment helper
+# Create agent definition JSON inline and call the Python deployment helper
 $agentDefinition = @{
     kind = "hosted"
     image = $ImageUri
@@ -39,19 +39,13 @@ Write-Host ""
 Write-Host "Agent definition prepared (details suppressed in logs)."
 Write-Host ""
 
-# Call the deployment helper with the agent definition
-$args = @(
-    "run",
-    "--project", "src/WorkshopLab.FoundryDeployment/WorkshopLab.FoundryDeployment.csproj",
-    "--",
-    "--project-endpoint", $ProjectEndpoint,
-    "--agent-name", $AgentName,
-    "--agent-definition", $agentDefinition,
-    "--set", "AZURE_AI_PROJECT_ENDPOINT=$ProjectEndpoint",
-    "--set", "MODEL_DEPLOYMENT_NAME=$ModelDeploymentName"
-)
-
-dotnet @args
+# Call the Python deployment helper with the agent definition
+python scripts/deploy_foundry_agent.py `
+    --project-endpoint $ProjectEndpoint `
+    --agent-name $AgentName `
+    --agent-definition $agentDefinition `
+    --set "AZURE_AI_PROJECT_ENDPOINT=$ProjectEndpoint" `
+    --set "MODEL_DEPLOYMENT_NAME=$ModelDeploymentName"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
