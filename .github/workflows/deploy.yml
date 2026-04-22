@@ -85,7 +85,7 @@ jobs:
             --platform linux/amd64 \
             --source-acr-auth-id "[caller]" \
             --file src/WorkshopLab.AgentHost/Dockerfile \
-            ./src/WorkshopLab.AgentHost
+            ./src
 
       - name: Summarize published image
         shell: bash

@@ -43,6 +43,57 @@ The agent uses deterministic local tools backed by `WorkshopLab.Core`:
 
 These tools make the scenario useful for teams who are evaluating or onboarding to Microsoft Foundry Hosted Agents.
 
+## Architecture: What You Will Build
+
+The diagram below shows the end-to-end data flow you will assemble across the six labs.
+
+```text
+┌──────────────┐     HTTPS/JSON      ┌──────────────────────────┐
+│  Chat UI     │ ──────────────────►  │  Microsoft Foundry       │
+│  (Blazor)    │ ◄──────────────────  │  Agent Service           │
+│  Lab 5       │   openai/v1/responses│  (control plane)         │
+└──────────────┘                      └────────┬─────────────────┘
+                                               │ routes to
+                                               ▼
+                                      ┌──────────────────────────┐
+                                      │  Hosted Agent Container  │
+                                      │  (WorkshopLab.AgentHost) │
+                                      │  Port 8088 /responses    │
+                                      │  Labs 0–4                │
+                                      └────────┬─────────────────┘
+                                               │ calls
+                                               ▼
+                                      ┌──────────────────────────┐
+                                      │  Deterministic Tools     │
+                                      │  (WorkshopLab.Core)      │
+                                      │  • RecommendShape        │
+                                      │  • BuildChecklist        │
+                                      │  • Troubleshoot          │
+                                      │  Lab 2                   │
+                                      └──────────────────────────┘
+```
+
+- **Labs 0–1:** Run the agent locally and configure Copilot for the repo.
+- **Lab 2:** Improve one deterministic tool and cover it with tests.
+- **Lab 3:** Validate the build, tests, and container in CI.
+- **Lab 4:** Provision ACR, publish the image, deploy to Foundry, and verify.
+- **Lab 5:** Connect the Blazor chat UI to the deployed agent.
+
+## Glossary
+
+If you are new to Microsoft Foundry, these terms appear throughout the labs.
+
+| Term | Definition |
+|---|---|
+| **Hosted agent** | A container-based agent that runs your own code (e.g. .NET, Python) inside Foundry. You control the runtime, tools, and logic. |
+| **Prompt agent** | A lightweight agent backed only by a model deployment and a system prompt — no custom code required. |
+| **`agent.yaml` manifest** | A declarative file that describes the agent's kind, protocol, environment variables, and metadata. Foundry reads this during deployment. |
+| **Responses protocol** | The OpenAI-compatible `/responses` HTTP contract your hosted agent must implement on port 8088. |
+| **ACR (Azure Container Registry)** | An Azure service that stores Docker container images. The workshop publishes the agent image here before Foundry pulls it. |
+| **ACR cloud build (`az acr build`)** | A way to build container images in the cloud without Docker Desktop installed locally. |
+| **`azd` (Azure Developer CLI)** | A CLI that provisions Azure resources from Bicep templates and manages environment variables. |
+| **Deterministic tool** | A local function with predictable, testable output — no LLM call needed. The workshop uses these for business logic. |
+
 ## Before You Start
 
 Before working through the workshop, make sure you have the accounts, access, and tools the labs assume.

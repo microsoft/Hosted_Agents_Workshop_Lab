@@ -1,6 +1,8 @@
 # Lab 3 — Core Guided: Add CI for Build, Test, and Container Validation
 
-**Goal:** Create a GitHub Actions workflow that validates the Hosted Agent solution on every pull request.
+> **Progress:** Lab 3 of 5 — `Lab 0 → Lab 1 → Lab 2 → [Lab 3] → Lab 4 → Lab 5`
+
+**Goal:** Review and understand the GitHub Actions workflow that validates the Hosted Agent solution on every pull request, then verify it works.
 
 **Time:** 30 minutes
 
@@ -8,9 +10,9 @@
 
 ## Steps
 
-1. Open `.github/workflows/ci.yml`.
-2. Verify the workflow restores, builds, and tests the solution.
-3. Add a Docker build step that validates the agent container definition:
+1. Open `.github/workflows/ci.yml` (this file already exists in the repo).
+2. Review the workflow and confirm it restores, builds, and tests the solution.
+3. Verify the Docker build step validates the agent container definition:
 
    ```yaml
    - name: Build hosted agent container

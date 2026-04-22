@@ -1,5 +1,7 @@
 # Lab 5 - Core Guided: Build a UI for the Hosted Agent
 
+> **Progress:** Lab 5 of 5 — `Lab 0 → Lab 1 → Lab 2 → Lab 3 → Lab 4 → [Lab 5]`
+
 **Goal:** Build a simple chat UI that calls your deployed Foundry hosted agent through the project-level `openai/v1/responses` endpoint.
 
 **Time:** 30 minutes
@@ -38,6 +40,12 @@ You can also provide the endpoint through environment variables:
 
 ```powershell
 $env:AZURE_AI_PROJECT_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
+```
+
+**macOS / Linux alternative:**
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
 ```
 
 ---
@@ -145,6 +153,10 @@ This generates:
 | `Foundry request failed with 401` | Run `az login` again and confirm tenant/subscription |
 | `Foundry request failed with 404` | Verify `ProjectEndpoint` and `AgentName` values |
 | Empty or unexpected response text | Check agent status and inspect raw response in the browser console/network trace |
+| `TokenCredential authentication is not permitted` | Ensure `DefaultAzureCredential` can acquire a token. Run `az account get-access-token --resource "https://ai.azure.com"` to verify. |
+| `CORS policy` error in browser console | The Blazor app calls the Foundry endpoint server-side, not from the browser. If you see CORS errors, confirm you are running the Blazor server (`dotnet run`) and not calling the Foundry API directly from JavaScript. |
+| Token expires during long sessions | `DefaultAzureCredential` caches tokens. Restart the Blazor app or run `az login` again to refresh. |
+| `HttpRequestException: Connection refused` | The hosted agent container may have stopped. Check its status in the Foundry portal or with `az cognitiveservices agent status`. |
 
 ---
 

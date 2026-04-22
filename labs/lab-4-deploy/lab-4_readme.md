@@ -1,5 +1,7 @@
 # Lab 4 — Core Guided: Provision Azure, Publish The Image, And Deploy The Hosted Agent
 
+> **Progress:** Lab 4 of 5 — `Lab 0 → Lab 1 → Lab 2 → Lab 3 → [Lab 4] → Lab 5`
+
 **Goal:** Follow the hosted-agent deployment path end to end: verify prerequisites, provision Azure resources, build and publish the container image to ACR, deploy the hosted agent to Foundry, and verify it responds.
 
 **Time:** 35 minutes
@@ -14,13 +16,13 @@
 
 Confirm these requirements before starting:
 
-| Requirement | Verify with |
-|---|---|
-| azd version 1.23.0 or later | `azd version` |
-| Docker Desktop installed and running | `docker info` |
-| Azure CLI authenticated | `az login` |
-| azd authenticated | `azd auth login` |
-| Contributor access on your Azure subscription | Required for `azd provision` |
+| Requirement | Verify with | Notes |
+|---|---|---|
+| azd version 1.23.0 or later | `azd version` | Update: `winget upgrade Microsoft.Azd` |
+| Azure CLI authenticated | `az login` | — |
+| azd authenticated | `azd auth login` | — |
+| Contributor access on your Azure subscription | — | Required for `azd provision` |
+| Docker Desktop _(optional)_ | `docker info` | Only needed for local container builds. This lab uses `az acr build` (cloud build) by default, so Docker Desktop is **not required**. |
 
 ---
 
@@ -38,13 +40,13 @@ Confirm these requirements before starting:
    winget upgrade Microsoft.Azd
    ```
 
-2. Verify Docker Desktop is running:
+2. _(Optional)_ Verify Docker Desktop is running:
 
    ```powershell
    docker info
    ```
 
-   If this command fails, start Docker Desktop and wait for it to fully initialize before continuing.
+   Docker Desktop is only needed if you want to build images locally. This lab uses `az acr build` (cloud build) by default, so you can skip this step if Docker is not available on your machine.
 
 3. Log in to Azure:
 
@@ -83,6 +85,13 @@ azd env set AZURE_AI_PROJECT_ENDPOINT "https://<resource>.services.ai.azure.com/
 azd env set MODEL_DEPLOYMENT_NAME "gpt-4.1-mini"
 ```
 
+> **Note:** `azd env set` works the same on all platforms. If you also need shell-level variables for local testing, use `export` on macOS/Linux:
+>
+> ```bash
+> export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+> export MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+> ```
+
 ---
 
 ## Step 4: Provision Azure Resources
@@ -95,6 +104,8 @@ azd provision
 ```
 
 > **Note:** You need Contributor access on your Azure subscription for resource provisioning. Provisioning takes approximately 2–3 minutes and creates the Azure Container Registry.
+
+> **Estimated Azure costs:** The workshop provisions an Azure Container Registry (Standard SKU). At typical pay-as-you-go pricing this costs roughly **$0.17/day (~$5/month)**. The hosted agent container runs only while started and is billed per-second of compute. For a short workshop session, expect **under $1** in total ACR + compute costs. Run `azd down` after the workshop to stop all charges. See the [Azure Container Registry pricing page](https://azure.microsoft.com/pricing/details/container-registry/) for current rates.
 
 After provisioning, capture the output values:
 
@@ -109,6 +120,8 @@ Confirm the following values are present:
 - `AZURE_AI_PROJECT_ENDPOINT`
 - `MODEL_DEPLOYMENT_NAME`
 
+> **Checkpoint:** If all four values appear in the output, provisioning succeeded. If `azd provision` failed with `SkuNotSupported` or a region error, see the [Known Issues](../../knownissues.md) for workarounds.
+
 ---
 
 ## Step 5: Test the Agent Locally
@@ -120,6 +133,13 @@ Before publishing to Azure, confirm the agent works in your local environment.
    ```powershell
    $env:AZURE_AI_PROJECT_ENDPOINT = "https://<resource>.services.ai.azure.com/api/projects/<project>"
    $env:MODEL_DEPLOYMENT_NAME = "gpt-4.1-mini"
+   ```
+
+   **macOS / Linux alternative:**
+
+   ```bash
+   export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+   export MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
    ```
 
 2. Run the hosted agent:
@@ -174,6 +194,8 @@ When the build completes, note the full image URI shown in the output:
 ```
 <acr-name>.azurecr.io/workshoplab-agent:lab4
 ```
+
+> **Checkpoint:** The ACR build output should end with a line like `Run ID: ca1 was successful after ...`. If the build fails with a missing project reference, verify you are using `./src` as the build context — not `./src/WorkshopLab.AgentHost`. See [Known Issues — Issue 3](../../knownissues.md) for details.
 
 ---
 
@@ -230,6 +252,8 @@ If the Foundry MCP tools are authenticated to the correct tenant, ask Copilot:
 > "Start the hosted agent container for `hosted-agent-readiness-coach` in my Foundry project"
 
 > **Tip:** To check the running status after start: `az cognitiveservices agent status --account-name $accountName --project-name $projectName --name hosted-agent-readiness-coach --agent-version 1`
+
+> **Checkpoint:** The status command should return `provisioningState: Running` and `health_state: Healthy`. If you see a different state, wait 1–2 minutes and check again. If the container fails to start, see [Known Issues — Issue 6](../../knownissues.md) for the correct CLI commands.
 
 ---
 
@@ -315,14 +339,19 @@ The Foundry project and hosted agent definition remain unless deleted separately
 
 | Problem | Solution |
 |---|---|
-| Docker build errors | Ensure Docker Desktop is running: `docker info` |
+| Docker build errors | Ensure Docker Desktop is running: `docker info` — or skip local builds and use `az acr build` (cloud build) |
+| ACR build fails with missing project reference | Use `./src` as build context, not `./src/WorkshopLab.AgentHost`. See [Known Issues — Issue 3](../../knownissues.md) |
 | `SubscriptionNotRegistered` error | Register providers: `az provider register --namespace Microsoft.CognitiveServices` |
 | `AuthorizationFailed` during provisioning | Request Contributor role on your subscription or resource group |
+| `SkuNotSupported` during ACR provisioning | Try a different region or reuse an existing ACR. See [Known Issues — Issue 2](../../knownissues.md) |
 | Agent doesn't start locally | Verify environment variables are set and run `az login` to refresh credentials |
 | `AcrPullUnauthorized` error | Grant AcrPull role to the project's managed identity on the container registry |
+| Container start returns 404 | Use `az cognitiveservices agent start` (Azure CLI ≥ 2.80). See [Known Issues — Issue 6](../../knownissues.md) |
 | azd version too old | Run `winget upgrade Microsoft.Azd` (Windows) or `brew upgrade azd` (macOS) |
 | Model not found | Verify the deployment name in Foundry → Build → Deployments matches `MODEL_DEPLOYMENT_NAME` |
 | `azd provision` fails with existing resource group | Choose a unique environment name or delete the existing resource group first |
+
+> **Full list of documented issues and workarounds:** See [knownissues.md](../../knownissues.md).
 
 ---
 
