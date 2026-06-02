@@ -4,11 +4,29 @@ All notable changes to this repository are documented in this file.
 
 The format is based on Keep a Changelog principles.
 
-## 2026-06-02 — Pin Microsoft.Extensions.AI to 10.3.0 in AgentHost
+## 2026-06-02 — Pin Microsoft.Extensions.AI to 10.3.0 in AgentHost and refresh peripheral packages
 
 ### Fixed
 
 - **Agent host throws `TypeLoadException: Could not load type 'UserInputRequestContent' from assembly 'Microsoft.Extensions.AI.Abstractions'` on the first `/responses` request.** `Azure.AI.AgentServer.AgentFramework 1.0.0-beta.11` depends on `Microsoft.Agents.AI 1.0.0-rc3`, which was built against `Microsoft.Extensions.AI.Abstractions 10.3.0`. The previous `Microsoft.Extensions.AI.OpenAI 10.6.0` reference forced the Abstractions assembly up to 10.6.0, which removed `UserInputRequestContent` in the 10.4+ refactor of request content types. Pinned `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.Abstractions`, and `Microsoft.Extensions.AI.OpenAI` to `10.3.0` in `src/WorkshopLab.AgentHost/WorkshopLab.AgentHost.csproj` so the runtime graph matches the agent server beta. Revisit when `Azure.AI.AgentServer.AgentFramework` ships a build rebuilt against `Microsoft.Agents.AI 1.8.x` / Abstractions 10.6.x.
+
+### Changed
+
+- **Refreshed unconstrained packages to latest.** Packages outside the agent-server compatibility chain were bumped to current versions:
+  - `Azure.AI.OpenAI` 2.8.0-beta.1 → **2.9.0-beta.1** (AgentHost)
+  - `Azure.AI.Projects` 2.0.1 → **2.1.0-beta.3** (AgentHost, FoundryDeployment)
+  - `Microsoft.NET.Test.Sdk` 18.5.1 → **18.6.0** (Tests)
+  - `Azure.Identity` 1.21.0, `YamlDotNet` 18.0.0, `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.5, `coverlet.collector` 10.0.1 are already at the latest stable.
+- Build verified clean (5 build warnings, all pre-existing: 2× `NU1902` OpenTelemetry CVE notices, 1× `CS8600` in `FoundryDeployment/Program.cs`). All 6 tests still pass. `Microsoft.Extensions.AI.Abstractions` still resolves to `10.3.0` in `project.assets.json` after the refresh.
+
+### Why other packages were not updated
+
+`Azure.AI.AgentServer.AgentFramework 1.0.0-beta.11` is the newest release and hard-pins:
+
+- `Azure.AI.AgentServer.Core` to `[1.0.0-beta.11]` (later beta.21–beta.25 builds of Core are not usable on their own)
+- `Microsoft.Agents.AI 1.0.0-rc3` (the stable 1.0.0 → 1.8.0 line on NuGet cannot be substituted)
+
+Microsoft.Agents.AI rc3 was compiled against `Microsoft.Extensions.AI.Abstractions 10.3.0`, so anything that drags Abstractions above 10.3.x removes `UserInputRequestContent` and breaks the hosted-agent runtime. Until a newer `Azure.AI.AgentServer.AgentFramework` beta ships rebuilt against `Microsoft.Agents.AI 1.x` stable, these three versions must stay pinned.
 
 ## 2026-04-22 — Quality Review and Lab Hardening
 
