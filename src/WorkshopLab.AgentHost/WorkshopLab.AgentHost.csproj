@@ -9,7 +9,15 @@
     <PackageReference Include="Azure.AI.OpenAI" Version="2.8.0-beta.1" />
     <PackageReference Include="Azure.AI.Projects" Version="2.0.1" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
+    <!--
+      Pin Microsoft.Extensions.AI* to 10.3.0 so the graph stays consistent with
+      Microsoft.Agents.AI 1.0.0-rc3, which Azure.AI.AgentServer.AgentFramework
+      1.0.0-beta.11 depends on. Newer 10.4+ Abstractions removed
+      UserInputRequestContent, which the agent server still references at runtime.
+    -->
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -4,6 +4,12 @@ All notable changes to this repository are documented in this file.
 
 The format is based on Keep a Changelog principles.
 
+## 2026-06-02 — Pin Microsoft.Extensions.AI to 10.3.0 in AgentHost
+
+### Fixed
+
+- **Agent host throws `TypeLoadException: Could not load type 'UserInputRequestContent' from assembly 'Microsoft.Extensions.AI.Abstractions'` on the first `/responses` request.** `Azure.AI.AgentServer.AgentFramework 1.0.0-beta.11` depends on `Microsoft.Agents.AI 1.0.0-rc3`, which was built against `Microsoft.Extensions.AI.Abstractions 10.3.0`. The previous `Microsoft.Extensions.AI.OpenAI 10.6.0` reference forced the Abstractions assembly up to 10.6.0, which removed `UserInputRequestContent` in the 10.4+ refactor of request content types. Pinned `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.Abstractions`, and `Microsoft.Extensions.AI.OpenAI` to `10.3.0` in `src/WorkshopLab.AgentHost/WorkshopLab.AgentHost.csproj` so the runtime graph matches the agent server beta. Revisit when `Azure.AI.AgentServer.AgentFramework` ships a build rebuilt against `Microsoft.Agents.AI 1.8.x` / Abstractions 10.6.x.
+
 ## 2026-04-22 — Quality Review and Lab Hardening
 
 ### Quality Review Summary
