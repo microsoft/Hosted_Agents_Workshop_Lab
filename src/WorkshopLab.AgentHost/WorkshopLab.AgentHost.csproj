@@ -15,8 +15,8 @@
       1.0.0-beta.11 depends on. Newer 10.4+ Abstractions removed
       UserInputRequestContent, which the agent server still references at runtime.
     -->
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.6.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.6.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
   </ItemGroup>
 
