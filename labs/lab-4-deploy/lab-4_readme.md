@@ -157,6 +157,8 @@ azd deploy
 
 `azd deploy` builds the container image from the Dockerfile, pushes it to the registry, and registers a **new immutable agent version** in Foundry. The Foundry runtime pulls the image using the agent's managed identity, which `azd` grants **AcrPull** during deploy.
 
+> **Automatic role grant.** A `postdeploy` hook ([scripts/grant-agent-identity-roles.ps1](../../scripts/grant-agent-identity-roles.ps1), wired in [azure.yaml](../../azure.yaml)) grants the agent's managed identity the three data-plane roles it needs to call the model — **Cognitive Services OpenAI User**, **Cognitive Services User**, and **Azure AI Developer**. If you lack permission to assign roles, the hook prints the manual commands and the deploy still succeeds. Allow a few minutes for RBAC to propagate before the first invoke.
+
 > **Note:** The first build takes a few minutes while the .NET 10 base images download. If the build cannot find `WorkshopLab.Core`, apply the Docker context fix from Step 3.
 
 ---
@@ -179,7 +181,7 @@ azd ai agent invoke "We are onboarding a team to Microsoft Foundry hosted agents
 
 Verify the reply includes a hosted-agent recommendation, an implementation shape, and operational guidance (checklist / prerequisites).
 
-> **If the invoke returns `401 PermissionDenied`:** the agent's managed identity needs model + connection access. Grant it **Cognitive Services OpenAI User** and **Azure AI Developer** on the Foundry account (see [Lab 0 — Required Azure permissions](../lab-0-foundry-setup/lab-0_readme.md#required-azure-permissions)). After granting roles, wait a few minutes for propagation — the running container caches its token, so let it idle (scale to zero) before invoking again.
+> **If the invoke returns `401 PermissionDenied`:** the agent's managed identity needs model access. The `postdeploy` hook grants this automatically; if it was skipped (you lacked role-assignment permission) grant all **three** roles on the Foundry account — **Cognitive Services OpenAI User**, **Cognitive Services User**, and **Azure AI Developer** (see [Lab 0 — Required Azure permissions](../lab-0-foundry-setup/lab-0_readme.md#required-azure-permissions) and [knownissues.md Blocker A](../../knownissues.md)). RBAC takes a few minutes to propagate, and the running container holds a token issued before the grant — so if it still 401s, re-run `azd deploy` to roll a fresh container that picks up the new access.
 
 **Verify in the portal:** open the [Foundry portal](https://ai.azure.com/) → your project → **Build → Agents** → `hosted-agent-readiness-coach` → **Open in playground**, and send the same prompt.
 

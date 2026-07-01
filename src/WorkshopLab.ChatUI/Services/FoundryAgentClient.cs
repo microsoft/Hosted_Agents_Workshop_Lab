@@ -12,27 +12,28 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
     private static readonly TokenRequestContext TokenScope = new(["https://ai.azure.com/.default"]);
     private readonly TokenCredential _credential = new DefaultAzureCredential();
 
-    public async Task<string> SendAsync(string userPrompt, CancellationToken cancellationToken = default)
+    public async Task<AgentReply> SendAsync(
+        string userPrompt,
+        string? previousResponseId = null,
+        CancellationToken cancellationToken = default)
     {
         var endpoint = ResolveProjectEndpoint();
         var agentName = configuration["Foundry:AgentName"] ?? "hosted-agent-readiness-coach";
-        var apiVersion = configuration["Foundry:ApiVersion"] ?? "2025-11-15-preview";
+        var apiVersion = configuration["Foundry:ApiVersion"] ?? "v1";
 
         var token = await _credential.GetTokenAsync(TokenScope, cancellationToken);
 
         // Hosted agents are invoked through their dedicated agent endpoint using the
-        // OpenAI Responses protocol. The platform manages conversation history, so the
-        // request body is just the input; no agent_reference is required.
+        // OpenAI Responses protocol. Passing previous_response_id threads the turns
+        // together so the agent remembers earlier messages; it is null on the first turn.
         var requestUri = $"{endpoint}/agents/{agentName}/endpoint/protocols/openai/responses?api-version={apiVersion}";
 
-        var payload = new
-        {
-            input = userPrompt,
-            stream = false
-        };
+        object payload = previousResponseId is null
+            ? new { input = userPrompt, stream = false }
+            : new { input = userPrompt, stream = false, previous_response_id = previousResponseId };
 
         var raw = await SendWithRetryAsync(requestUri, token.Token, payload, cancellationToken);
-        return ExtractAssistantText(raw);
+        return ParseReply(raw);
     }
 
     private async Task<string> SendWithRetryAsync(
@@ -100,25 +101,53 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
 
     private string ResolveProjectEndpoint()
     {
-        var endpoint = configuration["Foundry:ProjectEndpoint"]
-            ?? configuration["AZURE_AI_PROJECT_ENDPOINT"];
-
-        if (string.IsNullOrWhiteSpace(endpoint))
+        // Prefer an explicitly configured project endpoint, then the azd-style env var.
+        // Ignore blank values and the shipped placeholder (which contains '<') so a stale
+        // appsettings entry can't shadow a real AZURE_AI_PROJECT_ENDPOINT and cause
+        // "Invalid URI: The hostname could not be parsed".
+        foreach (var candidate in new[]
         {
-            throw new InvalidOperationException(
-                "Set Foundry:ProjectEndpoint (or AZURE_AI_PROJECT_ENDPOINT) before using the UI.");
+            configuration["Foundry:ProjectEndpoint"],
+            configuration["AZURE_AI_PROJECT_ENDPOINT"]
+        })
+        {
+            if (string.IsNullOrWhiteSpace(candidate) || candidate.Contains('<'))
+            {
+                continue;
+            }
+
+            if (!Uri.TryCreate(candidate.Trim(), UriKind.Absolute, out _))
+            {
+                continue;
+            }
+
+            return candidate.Trim().TrimEnd('/');
         }
 
-        return endpoint.TrimEnd('/');
+        throw new InvalidOperationException(
+            "No valid Foundry project endpoint is configured. Set Foundry:ProjectEndpoint in " +
+            "appsettings.Development.json, or set the AZURE_AI_PROJECT_ENDPOINT (or Foundry__ProjectEndpoint) " +
+            "environment variable to your project endpoint, for example " +
+            "https://<account>.services.ai.azure.com/api/projects/<project>.");
     }
 
-    private static string ExtractAssistantText(string responseJson)
+    private static AgentReply ParseReply(string responseJson)
     {
         using var doc = JsonDocument.Parse(responseJson);
+        var root = doc.RootElement;
 
-        if (!doc.RootElement.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
+        var responseId = root.TryGetProperty("id", out var idElement) && idElement.ValueKind == JsonValueKind.String
+            ? idElement.GetString()
+            : null;
+
+        return new AgentReply(ExtractAssistantText(root) ?? responseJson, responseId);
+    }
+
+    private static string? ExtractAssistantText(JsonElement root)
+    {
+        if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
         {
-            return responseJson;
+            return null;
         }
 
         foreach (var item in output.EnumerateArray())
@@ -147,6 +176,9 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
             }
         }
 
-        return responseJson;
+        return null;
     }
 }
+
+/// <summary>The assistant's reply text plus the response id used to thread the next turn.</summary>
+public sealed record AgentReply(string Text, string? ResponseId);

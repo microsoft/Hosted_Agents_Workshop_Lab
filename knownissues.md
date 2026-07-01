@@ -4,32 +4,27 @@ This page collects the issues you are most likely to hit while working through t
 
 > **Hosted agents are in preview.** APIs, regions, and CLI commands can change between updates. When a command behaves differently from the docs, check the current [Microsoft Learn hosted-agent quickstart](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd) for the latest syntax.
 
-> **Note:** Issue 7 is fixed in the repo, and Issue 1 is hardened with `global.json`. Issues 2–6 are environmental (Azure region/SKU, RBAC, CLI version, or manual build context) rather than repo defects — they are documented workarounds for conditions outside the codebase.
+> **Note:** Issue 1 is hardened with `global.json`, and the agent-identity roles (Blocker A) are now granted automatically by a post-deploy hook. Issues 2–7 are environmental (Azure region/SKU, RBAC, CLI version, manual build context, or project lifecycle) rather than repo defects — they are documented workarounds for conditions outside the codebase.
 
 ---
 
 ## Top blockers (seen during a live Lab 4 deployment)
 
-These two are the most common reasons a *successfully deployed* agent still fails when you invoke it. Both are confirmed from a real end-to-end run.
+These are the most common reasons a *successfully deployed* agent still fails when you invoke it — confirmed from a real end-to-end run. Blocker A is now automated by a post-deploy hook; Blocker B is guarded by a version pin.
 
 ### A. `azd ai agent invoke` returns `401 PermissionDenied`
 
-**Symptom:** The agent deploys and shows `active`, but invoking it returns `401 PermissionDenied` — either "lacks the required data action …/chat/completions/action" or "Principal does not have access to API/Operation."
+**Symptom:** The agent deploys and shows `active`, but invoking it returns `401 PermissionDenied` ("lacks the required data action …/chat/completions/action" or "Principal does not have access to API/Operation").
 
-**Cause:** The agent runs as its own managed identity. This workshop's code resolves the model connection and calls the model itself, so that identity needs data-plane roles that are not always granted automatically.
+**Cause:** The agent runs as its own managed identity, and this workshop's code calls the model itself, so that identity needs three data-plane roles on the Foundry account: **Cognitive Services OpenAI User**, **Cognitive Services User**, and **Azure AI Developer**.
 
-**Fix:** Grant the agent's managed identity two roles on the Foundry account, then let the container idle (scale to zero) so it refreshes its token:
+**Fixed in the repo:** a `postdeploy` hook ([scripts/grant-agent-identity-roles.ps1](scripts/grant-agent-identity-roles.ps1), wired in [azure.yaml](azure.yaml)) grants these automatically after `azd deploy`. You only need to act if the hook was **skipped** because you lack role-assignment permission (Owner / User Access Administrator) — it prints the exact `az role assignment create` commands to run.
+
+After the roles exist, RBAC takes a few minutes to propagate **and** the running container still holds a token issued before the grant — so if the first invoke still 401s, re-run `azd deploy` to roll a fresh container that picks up the new access:
 
 ```powershell
-az role assignment create --assignee-object-id <agent-identity-object-id> --assignee-principal-type ServicePrincipal `
-  --role "Cognitive Services OpenAI User" `
-  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
-az role assignment create --assignee-object-id <agent-identity-object-id> --assignee-principal-type ServicePrincipal `
-  --role "Azure AI Developer" `
-  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
+azd deploy --no-prompt
 ```
-
-The object id appears in the first 401 error message. See [Lab 0 — Required Azure permissions](labs/lab-0-foundry-setup/lab-0_readme.md#required-azure-permissions). After granting roles, wait a few minutes for RBAC propagation and stop invoking so the container cold-starts with a fresh token.
 
 ### B. Deployed container fails with `TypeLoadException: UserInputRequestContent`
 
@@ -167,8 +162,34 @@ You can also start and check the agent from the [Foundry portal](https://ai.azur
 
 ---
 
-## Issue 7: `OpenTelemetry` moderate-severity restore warnings (NU1902) — resolved
+## Issue 7: `Project not found` after deleting and recreating a Foundry project
 
-**Status:** Resolved on 2026-07-01. The OpenTelemetry stack is pinned to `1.16.0` in `src/WorkshopLab.AgentHost/WorkshopLab.AgentHost.csproj`, which clears both advisories (GHSA-g94r-2vxg-569j and GHSA-4625-4j76-fww9). The solution builds with 0 warnings.
+**Symptom:** After deleting a Foundry project and re-provisioning, one or more of these fail even though `azd provision` reports the project as `Succeeded`:
 
-If you see `NU1902` again after a package bump, check whether a transitive dependency reintroduced an older `OpenTelemetry.*` version and raise the explicit pins to the latest coherent OpenTelemetry release.
+- The Foundry portal shows **"Error loading your agents. Project not found"**.
+- `azd deploy` fails at agent registration with `RESPONSE 404 {"code":"NotFound","message":"Project not found"}`.
+- Re-provisioning fails on a connection with `Connection <name> already exist, and can only be updated by the workspace that created it` or `RoleAssignmentUpdateNotPermitted`.
+
+**Cause:** Deleting a Foundry project leaves a short-lived **tombstone** in the data plane. If you recreate a project with the **same name**, the control plane (ARM) shows it as `Succeeded`, but the data plane still resolves the old, deleted project — so agent APIs and the portal return `Project not found`. Shared connections (for example Application Insights) also stay **owned by the old project's workspace**, so a new same-account project cannot re-attach them.
+
+**Workaround:** Avoid deleting and recreating a project under the same name. If you must reset:
+
+- **Preferred — full teardown, then redeploy:** tear the environment down completely so no orphaned project, connections, or role assignments remain, then provision fresh:
+
+  ```powershell
+  azd down --purge --no-prompt
+  azd provision --no-prompt
+  azd deploy --no-prompt
+  ```
+
+- **Or — deploy under a brand-new name:** point the azd environment at a **new project name** (and, if a shared connection is still owned by the old workspace, a fresh account/environment) before provisioning:
+
+  ```powershell
+  azd env set AZURE_AI_PROJECT_NAME <new-unique-project-name>
+  azd provision --no-state --no-prompt
+  azd deploy --no-prompt
+  ```
+
+- **Or — wait it out:** if you already recreated the same name, the data-plane tombstone typically clears within ~15–30 minutes. Re-run `azd deploy --no-prompt` afterward; no rebuild is needed.
+
+> **Tip:** For a clean reset, prefer `azd down` over deleting the project by hand in the portal. Manual deletion is what leaves the orphaned connections and role assignments that block the next provision.

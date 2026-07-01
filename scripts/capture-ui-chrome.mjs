@@ -35,14 +35,25 @@ try {
 
   await page.getByRole("button", { name: "Send Prompt" }).click();
 
+  // Wait for the real agent reply: the user message must appear, a second
+  // assistant bubble (the reply, not the greeting) must render, and the
+  // "…thinking" indicator must be gone. Matching only "ASSISTANT" text is not
+  // enough because the initial greeting is already an assistant bubble.
   await page.waitForFunction(
-    (expected) => {
-      const body = document.body.innerText || "";
-      return body.includes(expected) && !body.includes("Sending...");
+    () => {
+      const assistantReplies = document.querySelectorAll(
+        ".chat-item.assistant:not(.thinking)"
+      ).length;
+      const userMessages = document.querySelectorAll(".chat-item.user").length;
+      const stillThinking = document.querySelector(".chat-item.thinking") !== null;
+      return userMessages >= 1 && assistantReplies >= 2 && !stillThinking;
     },
-    "ASSISTANT",
+    undefined,
     { timeout: 120000 }
   );
+
+  // Small settle delay so the reply text is fully painted before capture.
+  await page.waitForTimeout(750);
 
   const shot3 = path.join(outputDir, "03-chat-ui-response-hd.png");
   await page.screenshot({ path: shot3, fullPage: false });

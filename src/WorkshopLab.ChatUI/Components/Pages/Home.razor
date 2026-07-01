@@ -18,13 +18,23 @@
 				<div class="text">@message.Text</div>
 			</div>
 		}
+		@if (_isSending)
+		{
+			<div class="chat-item assistant thinking">
+				<div class="role">Assistant</div>
+				<div class="text">…thinking</div>
+			</div>
+		}
 	</div>
 
 	<div class="composer">
 		<textarea @bind="_prompt"
 				  rows="4"
 				  placeholder="Ask your hosted agent about implementation shape, readiness, or troubleshooting..."></textarea>
-		<button @onclick="SendAsync" disabled="@_isSending">@(_isSending ? "Sending..." : "Send Prompt")</button>
+		<div class="composer-actions">
+			<button @onclick="SendAsync" disabled="@_isSending">@(_isSending ? "Sending…" : "Send Prompt")</button>
+			<button class="secondary" @onclick="StartNewConversation" disabled="@_isSending">New conversation</button>
+		</div>
 	</div>
 
 	@if (!string.IsNullOrWhiteSpace(_error))
@@ -43,6 +53,7 @@
 		"We are onboarding a team to Microsoft Foundry hosted agents. We need private API access, a repeatable deployment process, and a launch checklist for production readiness. Should we use a hosted agent for this scenario, and what implementation shape do you recommend?";
 	private string _error = string.Empty;
 	private bool _isSending;
+	private string? _previousResponseId;
 
 	private async Task SendAsync()
 	{
@@ -59,8 +70,9 @@
 
 		try
 		{
-			var reply = await AgentClient.SendAsync(prompt);
-			_messages.Add(new ChatLine(false, "Assistant", reply));
+			var reply = await AgentClient.SendAsync(prompt, _previousResponseId);
+			_messages.Add(new ChatLine(false, "Assistant", reply.Text));
+			_previousResponseId = reply.ResponseId;
 		}
 		catch (Exception ex)
 		{
@@ -70,6 +82,15 @@
 		{
 			_isSending = false;
 		}
+	}
+
+	private void StartNewConversation()
+	{
+		_messages.Clear();
+		_messages.Add(new ChatLine(false, "Assistant", "Ready. Ask me whether your scenario should use a hosted agent."));
+		_previousResponseId = null;
+		_error = string.Empty;
+		_prompt = string.Empty;
 	}
 
 	private sealed record ChatLine(bool IsUser, string Role, string Text);
@@ -148,6 +169,20 @@
 	.composer button:disabled {
 		background: #64748b;
 		cursor: not-allowed;
+	}
+
+	.composer-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.composer button.secondary {
+		background: #475569;
+	}
+
+	.chat-item.thinking .text {
+		color: #475569;
+		font-style: italic;
 	}
 
 	.error {

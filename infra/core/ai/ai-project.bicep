@@ -206,14 +206,27 @@ module aiConnections './connection.bicep' = [for (connection, index) in connecti
 }]
 
 // Azure AI User for the developer, scoped to the Foundry Project.
-// Project scope is sufficient for creating/running agents and calling models via the project endpoint.
+// Grants model/inference access via the project endpoint.
 resource localUserAzureAIUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: aiAccount::project
   name: guid(subscription().id, resourceGroup().id, principalId, '53ca6127-db72-4b80-b1b0-d745d6d5456d')
   properties: {
     principalId: principalId
     principalType: principalType
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')
+  }
+}
+
+// Azure AI Developer for the developer, scoped to the Foundry Project.
+// Required to author/create hosted agent versions (azd deploy -> create_agent). Azure AI User
+// alone is NOT sufficient in the hosted-agents preview: create_agent returns 404 "Project not found".
+resource localUserAzureAIDeveloperRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: aiAccount::project
+  name: guid(subscription().id, resourceGroup().id, principalId, '64702f94-c441-49e6-a78b-ef80e0188fee')
+  properties: {
+    principalId: principalId
+    principalType: principalType
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')
   }
 }
 

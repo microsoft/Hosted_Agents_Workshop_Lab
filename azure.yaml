@@ -27,6 +27,21 @@ services:
                     capacity: 10
                     name: GlobalStandard
             startupCommand: dotnet run
+hooks:
+    # After the agent is deployed, grant its managed identity the model/data-plane roles
+    # it needs to run — so `azd ai agent invoke` and the Lab 5 UI work without a manual
+    # RBAC step. Idempotent and non-fatal (see scripts/grant-agent-identity-roles.ps1).
+    postdeploy:
+        windows:
+            shell: pwsh
+            run: ./scripts/grant-agent-identity-roles.ps1
+            continueOnError: true
+            interactive: false
+        posix:
+            shell: pwsh
+            run: ./scripts/grant-agent-identity-roles.ps1
+            continueOnError: true
+            interactive: false
 infra:
     provider: bicep
 pipeline:
