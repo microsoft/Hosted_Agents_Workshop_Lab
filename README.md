@@ -18,18 +18,20 @@ By the end of the workshop, you will have worked through the full development pa
 2. Copilot customization
 3. Feature implementation with local tools
 4. CI automation
-5. Deployment preparation for hosted agents
+5. Deployment to Microsoft Foundry with the `azd ai agent` extension
 6. UI integration for end-to-end usage
 
 ## How This Repository Is Structured
 
-This repository demonstrates three distinct stages:
+The workshop moves through three stages:
 
 - local and CI validation inside the repo
-- Azure resource provisioning and image publishing for deployment readiness
-- Microsoft Foundry control-plane deployment as an explicit separate step
+- one-command deployment to Microsoft Foundry with the `azd ai agent` extension
+- UI integration against the deployed agent
 
-That split is intentional. `azd` provisions the Azure resource group and Azure Container Registry, GitHub Actions can publish the agent image to ACR, and the final Microsoft Foundry agent create or update step remains explicit because it depends on your real project endpoint, manifest values, and hosted-agent lifecycle controls.
+The **primary deployment path is `azd ai agent`** (Lab 4): a single guided flow that scaffolds the agent, provisions the Azure resource group, builds and publishes the container image, and registers the hosted agent in your Foundry project — `init → run → provision → deploy → invoke`.
+
+A manual Azure Container Registry + SDK route (where `azd` provisions the registry, you publish the image yourself, and you call the Foundry control plane explicitly) is kept as **optional background** in the [Lab 4 manual appendix](labs/lab-4-deploy/lab-4-appendix-manual-deploy.md) for teams who need fine-grained control.
 
 ## What You Build
 
