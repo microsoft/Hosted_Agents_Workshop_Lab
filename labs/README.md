@@ -24,7 +24,7 @@ If you are running this in a shared enterprise environment, confirm the learner 
 | [Lab 1](lab-1-copilot-config/lab-1_readme.md) | Copilot config | Repo-specific instructions and a Hosted Agent review skill |
 | [Lab 2](lab-2-implementation-shape/lab-2_readme.md) | Implementation shape | Add or improve a local tool in the hosted agent |
 | [Lab 3](lab-3-ci/lab-3_readme.md) | CI | Build, test, and container validation in GitHub Actions |
-| [Lab 4](lab-4-deploy/lab-4_readme.md) | Deploy | Prepare and publish a deployable hosted-agent bundle |
+| [Lab 4](lab-4-deploy/lab-4_readme.md) | Deploy | Deploy the hosted agent with the `azd ai agent` extension ([manual ACR/SDK route](lab-4-deploy/lab-4-appendix-manual-deploy.md) is optional background) |
 | [Lab 5](lab-5-ui/lab-5_readme.md) | UI | Build a chat UI and validate end-to-end agent responses |
 
 Each lab is a guided exercise written for beginners and intended to be completed in sequence.

@@ -1,0 +1,46 @@
+{
+  "tests": [
+    {
+      "id": "on_topic_recommendation",
+      "description": "Recommends an implementation shape for a hosted-agent scenario.",
+      "prompt": "We need private API access and custom server-side logic. Should we use a hosted agent or a prompt agent, and why?",
+      "assertions": {
+        "contains_any": ["hosted agent", "prompt agent"]
+      }
+    },
+    {
+      "id": "launch_checklist",
+      "description": "Produces a launch checklist for a named agent and environment.",
+      "prompt": "Create a launch checklist for an agent named triage-coach in the pilot environment.",
+      "assertions": {
+        "contains_any": ["checklist", "environment", "deploy", "8088"]
+      }
+    },
+    {
+      "id": "troubleshoot_responses",
+      "description": "Gives troubleshooting guidance for the /responses endpoint.",
+      "prompt": "Our container starts but requests to /responses fail. How should we troubleshoot this?",
+      "assertions": {
+        "contains_any": ["/responses", "8088", "port"]
+      }
+    },
+    {
+      "id": "thread_turn_1",
+      "description": "First turn of a multi-turn conversation; captures the response id for turn 2.",
+      "prompt": "We are evaluating hosted agents for a team that needs external tool access.",
+      "assertions": {
+        "contains_any": ["hosted agent", "tool", "agent", "recommend"]
+      },
+      "save_response_id_as": "eval_thread"
+    },
+    {
+      "id": "thread_turn_2",
+      "description": "Second turn using previous_response_id; the answer must show context survived.",
+      "prompt": "Given that, what is the first thing we should do?",
+      "use_previous_response_id": "eval_thread",
+      "assertions": {
+        "contains_any": ["local", "checklist", "start", "first", "step"]
+      }
+    }
+  ]
+}

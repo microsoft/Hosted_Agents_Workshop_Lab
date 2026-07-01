@@ -2,7 +2,7 @@
 
 > **Progress:** Lab 5 of 5 — `Lab 0 → Lab 1 → Lab 2 → Lab 3 → Lab 4 → [Lab 5]`
 
-**Goal:** Build a simple chat UI that calls your deployed Foundry hosted agent through the project-level `openai/v1/responses` endpoint.
+**Goal:** Build a simple chat UI that calls your deployed Foundry hosted agent through its dedicated `agents/<name>/endpoint/protocols/openai/responses` endpoint.
 
 **Time:** 30 minutes
 
@@ -31,7 +31,7 @@ Set the Foundry endpoint and target agent name in `src/WorkshopLab.ChatUI/appset
   "Foundry": {
     "ProjectEndpoint": "https://<account>.services.ai.azure.com/api/projects/<project>",
     "AgentName": "hosted-agent-readiness-coach",
-    "ApiVersion": "2025-01-01-preview"
+    "ApiVersion": "2025-11-15-preview"
   }
 }
 ```
@@ -96,7 +96,7 @@ In the chat box, send this prompt:
 Expected behavior:
 
 - Your message appears in the chat log
-- The app calls `POST /openai/v1/responses` with `agent_reference`
+- The app calls `POST /agents/<name>/endpoint/protocols/openai/responses` with the `Foundry-Features` header
 - The assistant reply appears in the chat log
 - The response includes a hosted-agent recommendation and implementation guidance
 
@@ -166,6 +166,6 @@ You now have a working end-to-end solution:
 
 - Hosted agent deployed in Foundry
 - UI client running locally in Blazor
-- Real-time prompt/response flow through `openai/v1/responses` with `agent_reference`
+- Real-time prompt/response flow through the agent's dedicated `agents/<name>/endpoint/protocols/openai/responses` endpoint
 
 This lab completes the full path from implementation and deployment to user-facing experience.

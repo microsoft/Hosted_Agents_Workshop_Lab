@@ -1,0 +1,68 @@
+name: Smoke Test Hosted Agent
+
+# Validates a deployed hosted agent by POSTing prompts to its Responses endpoint
+# and asserting the replies. Runs after you deploy the agent (via the azd ai
+# pathway in Lab 4, or the optional manual path). Deploy-method agnostic.
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_endpoint:
+        description: Foundry project endpoint. Leave blank to use the FOUNDRY_PROJECT_ENDPOINT repository variable.
+        required: false
+        type: string
+      agent_name:
+        description: Deployed hosted agent name.
+        required: false
+        default: hosted-agent-readiness-coach
+        type: string
+  workflow_call:
+    inputs:
+      project_endpoint:
+        required: true
+        type: string
+      agent_name:
+        required: false
+        default: hosted-agent-readiness-coach
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PROJECT_ENDPOINT: ${{ inputs.project_endpoint != '' && inputs.project_endpoint || vars.FOUNDRY_PROJECT_ENDPOINT }}
+      AGENT_NAME: ${{ inputs.agent_name != '' && inputs.agent_name || 'hosted-agent-readiness-coach' }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          if [ -z "$PROJECT_ENDPOINT" ]; then
+            echo "FOUNDRY_PROJECT_ENDPOINT is not configured." >&2
+            echo "Set it as a workflow input or repository variable." >&2
+            exit 1
+          fi
+
+      - name: Azure login
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Smoke test the hosted agent
+        uses: ./.github/actions/smoke-test
+        with:
+          project_endpoint: ${{ env.PROJECT_ENDPOINT }}
+          agent_name: ${{ env.AGENT_NAME }}

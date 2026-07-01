@@ -1,3 +1,7 @@
+# OPTIONAL / BACKGROUND ONLY — manual hosted-agent deployment path.
+# The recommended path is the `azd ai agent` extension (see labs/lab-4-deploy/lab-4_readme.md).
+# This script belongs to the manual appendix (labs/lab-4-deploy/lab-4-appendix-manual-deploy.md):
+# it registers a hosted-agent version from a prebuilt ACR image via WorkshopLab.FoundryDeployment.
 param(
     [string]$ProjectEndpoint = $env:AZURE_AI_PROJECT_ENDPOINT,
     [string]$AgentName = "hosted-agent-readiness-coach",
@@ -14,41 +18,26 @@ if ([string]::IsNullOrWhiteSpace($ModelDeploymentName)) {
     throw "MODEL_DEPLOYMENT_NAME must be set before deploying the hosted agent."
 }
 
-# Create agent definition JSON inline and call the deployment helper
-$agentDefinition = @{
-    kind = "hosted"
-    image = $ImageUri
-    cpu = "1"
-    memory = "2Gi"
-    container_protocol_versions = @(
-        @{
-            protocol = "responses"
-            version = "v1"
-        }
-    )
-    environment_variables = @{
-        AZURE_AI_PROJECT_ENDPOINT = $ProjectEndpoint
-        MODEL_DEPLOYMENT_NAME = $ModelDeploymentName
-    }
-} | ConvertTo-Json -Depth 10
-
 Write-Host "Creating hosted agent '$AgentName' with image: $ImageUri"
 Write-Host "Project: $ProjectEndpoint"
 Write-Host "Deployment: $ModelDeploymentName"
 Write-Host ""
-Write-Host "Agent definition prepared (details suppressed in logs)."
-Write-Host ""
 
-# Call the deployment helper with the agent definition
+# Register the hosted-agent version via the Azure.AI.Projects.Agents SDK
+# (WorkshopLab.FoundryDeployment builds the typed HostedAgentDefinition).
 $args = @(
     "run",
     "--project", "src/WorkshopLab.FoundryDeployment/WorkshopLab.FoundryDeployment.csproj",
     "--",
     "--project-endpoint", $ProjectEndpoint,
     "--agent-name", $AgentName,
-    "--agent-definition", $agentDefinition,
-    "--set", "AZURE_AI_PROJECT_ENDPOINT=$ProjectEndpoint",
-    "--set", "MODEL_DEPLOYMENT_NAME=$ModelDeploymentName"
+    "--image", $ImageUri,
+    "--cpu", "1",
+    "--memory", "2Gi",
+    "--protocol", "responses",
+    "--protocol-version", "1.0.0",
+    "--env", "AZURE_AI_PROJECT_ENDPOINT=$ProjectEndpoint",
+    "--env", "MODEL_DEPLOYMENT_NAME=$ModelDeploymentName"
 )
 
 dotnet @args

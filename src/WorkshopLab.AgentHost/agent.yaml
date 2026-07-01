@@ -1,28 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
+
+kind: hosted
 name: hosted-agent-readiness-coach
-displayName: "Hosted Agent Readiness Coach"
-description: >
-  A starter code-based hosted agent that helps teams choose implementation shape,
-  prepare a pilot checklist, and troubleshoot common Microsoft Foundry Hosted Agent setup issues.
+description: |
+    A starter code-based hosted agent that helps teams choose implementation shape, prepare a pilot checklist, and troubleshoot common Microsoft Foundry Hosted Agent setup issues.
 metadata:
-  authors:
-    - Workshop Lab
-  tags:
-    - Microsoft Foundry
-    - Hosted Agents
-    - Agent Framework
-    - Readiness
-template:
-  name: hosted-agent-readiness-coach
-  kind: hosted
-  protocols:
+    authors:
+        - Workshop Lab
+    tags:
+        - Microsoft Foundry
+        - Hosted Agents
+        - Agent Framework
+        - Readiness
+protocols:
     - protocol: responses
-      version: v1
-  environment_variables:
+      version: 1.0.0
+resources:
+    cpu: "0.5"
+    memory: 1Gi
+environment_variables:
     - name: AZURE_AI_PROJECT_ENDPOINT
       value: ${AZURE_AI_PROJECT_ENDPOINT}
     - name: MODEL_DEPLOYMENT_NAME
-      value: "{{chat}}"
-resources:
-  - kind: model
-    id: gpt-4.1-mini
-    name: chat
+      value: gpt-5.4-mini

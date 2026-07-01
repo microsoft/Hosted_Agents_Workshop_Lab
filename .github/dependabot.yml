@@ -5,6 +5,24 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      # Bundle routine .NET updates into a single PR to reduce review noise.
+      dotnet-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # These are intentionally pinned to 10.3.0 for compatibility with
+      # Azure.AI.AgentServer.AgentFramework 1.0.0-beta.11 (via Microsoft.Agents.AI
+      # 1.0.0-rc3). Versions 10.4+ removed the UserInputRequestContent type that
+      # the agent server references at runtime, causing a TypeLoadException in the
+      # deployed container. Do not let Dependabot auto-bump these until the agent
+      # server ships a build rebuilt against a newer Microsoft.Extensions.AI.
+      - dependency-name: "Microsoft.Extensions.AI"
+        versions: [">=10.4.0"]
+      - dependency-name: "Microsoft.Extensions.AI.Abstractions"
+        versions: [">=10.4.0"]
+      - dependency-name: "Microsoft.Extensions.AI.OpenAI"
+        versions: [">=10.4.0"]
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -17,3 +35,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"

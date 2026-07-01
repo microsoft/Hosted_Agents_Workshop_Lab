@@ -15,9 +15,23 @@
       1.0.0-beta.11 depends on. Newer 10.4+ Abstractions removed
       UserInputRequestContent, which the agent server still references at runtime.
     -->
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.7.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.7.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.7.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+    <!--
+      Pin the OpenTelemetry stack to 1.16.0 to clear the moderate NU1902
+      advisories on OpenTelemetry.Api (GHSA-g94r-2vxg-569j) and
+      OpenTelemetry.Exporter.OpenTelemetryProtocol (GHSA-4625-4j76-fww9),
+      which otherwise arrive transitively at 1.12.x / 1.13.1. The OpenTelemetry
+      packages ship as a coherent set, so move them together.
+    -->
+    <PackageReference Include="OpenTelemetry" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
   </ItemGroup>
 
   <PropertyGroup>

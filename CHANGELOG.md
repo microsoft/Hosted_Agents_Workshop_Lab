@@ -4,6 +4,82 @@ All notable changes to this repository are documented in this file.
 
 The format is based on Keep a Changelog principles.
 
+## 2026-07-01 — Live deployment validation, non-deprecated model, modern infra, and smoke tests
+
+### Changed
+
+- **Model updated to `gpt-5.4-mini`** (GA, non-deprecated) across code and docs — `gpt-4.1-mini` is in the deprecating lifecycle. Verified available with quota in `northcentralus`.
+- **Replaced the legacy ACR-only Bicep with the modern `azd-ai-starter-basic` infrastructure** under `infra/` (Foundry account + project + model deployment + ACR + App Insights + Log Analytics via Azure Verified Modules). `azd provision` now creates the whole Foundry environment; the old `SkuNotSupported` ACR failure is gone.
+- **`azure.yaml` / `agent.yaml` finalized for the azd container path:** removed the `image: ${AGENT_IMAGE}` placeholder (azd builds from the Dockerfile) and set `docker.context: ../` so the shared `WorkshopLab.Core` project is included in the build.
+
+### Fixed
+
+- **Runtime `TypeLoadException` on the deployed agent.** The `Microsoft.Extensions.AI*` pins had drifted to 10.7.0, which removed `UserInputRequestContent` referenced by `Azure.AI.AgentServer` beta.11. Re-pinned to 10.3.0 and added Dependabot `ignore` rules (`>=10.4.0`) so it cannot regress.
+- **`401 PermissionDenied` on invoke.** Documented and applied the agent managed-identity roles (**Cognitive Services OpenAI User** + **Azure AI Developer**) required by this workshop's custom-code model-connection pattern.
+
+### Added
+
+- **Smoke tests** (based on the [Foundry smoke-test blog](https://techcommunity.microsoft.com/blog/azuredevcommunityblog/smoke-test-microsoft-foundry-agents-with-github-actions/4531912)): `deployment/smoke-tests.py`, `deployment/smoke-tests.json` (adapted to the Readiness Coach), a reusable `.github/actions/smoke-test/action.yml`, and the `.github/workflows/smoke-test.yml` dispatch/`workflow_call` workflow. Validated 5/5 against the live agent, including `previous_response_id` chaining.
+- **Lab 0 "Required Azure permissions"** — operator roles + agent managed-identity roles, each with the reason, plus hosted-agent security best practices.
+- **Lab 4 Step 9 (optional smoke test)** with local + GitHub Actions setup instructions, and a `401` troubleshooting row.
+- **`global.json`** pinning the .NET SDK (10.0.100, `rollForward: latestMinor`).
+
+### Validated live
+
+- End-to-end on the **`azd ai agent`** pathway in `northcentralus`: `azd ai agent init` → `azd provision` → `azd deploy` → `azd ai agent invoke` returned a correct, tool-backed response from `gpt-5.4-mini`. Build clean (0 warnings/0 errors); tests 6/6; smoke tests 5/5.
+
+## 2026-07-01 — Add global.json to harden the .NET SDK requirement
+
+### Fixed
+
+- **Added [global.json](global.json)** pinning the SDK to `10.0.100` with `rollForward: latestMinor`. This addresses `knownissues.md` Issue 1: an older SDK (8.x/9.x) now fails immediately with a clear message instead of confusing language/framework errors, and any installed 10.x SDK is accepted for reproducible builds. Verified with SDK 10.0.109 — solution builds with 0 warnings, 0 errors.
+- Reviewed the remaining known issues: Issue 7 is fixed, Issue 1 is now hardened, and Issues 2–6 are environmental (Azure region/SKU, RBAC, CLI version, manual build context) rather than repo defects, so they remain as documented workarounds. Added a note to `knownissues.md` clarifying this.
+
+## 2026-07-01 — Clear the OpenTelemetry NU1902 advisories
+
+### Fixed
+
+- **Pinned the OpenTelemetry stack to `1.16.0`** in [WorkshopLab.AgentHost.csproj](src/WorkshopLab.AgentHost/WorkshopLab.AgentHost.csproj), clearing the two moderate `NU1902` advisories that arrived transitively: `OpenTelemetry.Api` 1.13.1 (GHSA-g94r-2vxg-569j) and `OpenTelemetry.Exporter.OpenTelemetryProtocol` 1.12.0 (GHSA-4625-4j76-fww9). The OpenTelemetry packages ship as a coherent set, so `OpenTelemetry`, `OpenTelemetry.Api`, `OpenTelemetry.Api.ProviderBuilderExtensions`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and `OpenTelemetry.Extensions.Hosting` were moved together. The full solution now builds with **0 warnings, 0 errors**; all 6 tests pass. Runtime telemetry export should still be spot-checked during the live Foundry test.
+
+## 2026-07-01 — Migrate WorkshopLab.FoundryDeployment to the Azure.AI.Projects.Agents SDK
+
+### Changed
+
+- **Replaced the reflection-based deployment helper with the typed `Azure.AI.Projects.Agents` SDK.** [src/WorkshopLab.FoundryDeployment/Program.cs](src/WorkshopLab.FoundryDeployment/Program.cs) now uses `AgentAdministrationClient.CreateAgentVersion(...)` with a strongly-typed `HostedAgentDefinition` (`ProjectsAgentDefinition.CreateHostedAgentDefinition` + `ContainerConfiguration` + `ProtocolVersionRecord`), passing the preview `Foundry-Features: HostedAgents=V1Preview` header via the `foundryFeatures` parameter. Removed all `System.Reflection` calls into private SDK members and the `AAIP001`-suppressed experimental surface is now used directly. This resolves the reflection follow-up noted below.
+- **Added the `Azure.AI.Projects.Agents` `2.1.0-beta.4` package** to [WorkshopLab.FoundryDeployment.csproj](src/WorkshopLab.FoundryDeployment/WorkshopLab.FoundryDeployment.csproj) (matching the existing `Azure.AI.Projects` beta).
+- **New helper CLI contract.** The app accepts structured flags (`--image`, `--cpu`, `--memory`, `--protocol`, `--protocol-version`, `--env NAME=VALUE`) or a declarative `--manifest` with `--set` placeholder substitution. Both build the same typed definition. Updated [scripts/deploy-hosted-agent-direct.ps1](scripts/deploy-hosted-agent-direct.ps1) (structured flags) and [scripts/deploy-foundry-agent.ps1](scripts/deploy-foundry-agent.ps1) (manifest + `--agent-name`; dropped the removed `--agent-id`, since `CreateAgentVersion` creates the next version automatically).
+- Build clean (0 errors; the previous `CS8600` warning is gone with the reflection code); all 6 tests pass. The typed SDK usage is compiler-verified, though a live Foundry project is still needed to validate the deploy end to end.
+
+## 2026-07-01 — Make `azd ai agent` the primary Lab 4 path; manual route becomes optional appendix
+
+### Changed
+
+- **Lab 4 now leads with the `azd ai agent` extension** (`init --from-code` → `run` → `provision` → `deploy` → `invoke`), matching the current Microsoft-recommended hosted-agent workflow. Rewrote [labs/lab-4-deploy/lab-4_readme.md](labs/lab-4-deploy/lab-4_readme.md) around the extension lifecycle, container deploy mode (the shared `WorkshopLab.Core` reference means the existing Dockerfile is reused), and a Docker build-context note.
+- **The former manual flow moved to [labs/lab-4-deploy/lab-4-appendix-manual-deploy.md](labs/lab-4-deploy/lab-4-appendix-manual-deploy.md)** — ACR provisioning, `az acr build`, `WorkshopLab.FoundryDeployment`, and `az cognitiveservices agent start` — clearly marked **optional / background only, not required** to finish the workshop.
+- **`src/WorkshopLab.AgentHost/Program.cs` reads both env-var conventions.** Endpoint resolves from `FOUNDRY_PROJECT_ENDPOINT` (platform-injected by `azd ai agent`) with fallback to `AZURE_AI_PROJECT_ENDPOINT` (manual path); model resolves from `AZURE_AI_MODEL_DEPLOYMENT_NAME` with fallback to `MODEL_DEPLOYMENT_NAME`. This lets the same container run under both paths.
+- **Deploy scripts flagged as optional.** Added header comments to [scripts/deploy-hosted-agent-direct.ps1](scripts/deploy-hosted-agent-direct.ps1) and [scripts/deploy-foundry-agent.ps1](scripts/deploy-foundry-agent.ps1) noting they belong to the manual appendix.
+- Updated the course map in [README.md](README.md) and the lab index in [labs/README.md](labs/README.md).
+- Build clean (0 errors); all 6 tests pass.
+
+## 2026-07-01 — Align hosted-agent definition and invocation with the current Foundry spec
+
+### Fixed
+
+- **Agent invocation used the superseded initial-preview pattern.** The Blazor UI (`FoundryAgentClient`), the `run-requests.http` production requests, and Labs 4–5 all invoked the agent through the shared project endpoint `POST {project}/openai/v1/responses` with an `agent_reference` in the body. Per [Migrate hosted agents to the latest version](https://learn.microsoft.com/azure/foundry/agents/how-to/migrate-hosted-agent-preview), each hosted agent now has a **dedicated endpoint** and is invoked at `POST {project}/agents/{name}/endpoint/protocols/openai/responses?api-version=2025-11-15-preview` with the `Foundry-Features: HostedAgents=V1Preview` header and a plain `input` body (no `agent_reference`). Updated the client, the `.http` samples, and the labs.
+- **Hosted agent definition JSON used out-of-date field names.** `scripts/deploy-hosted-agent-direct.ps1` posted a top-level `image` plus `container_protocol_versions` at version `v1`. Updated to the current `HostedAgentDefinition` shape: `container_configuration.image` and `protocol_versions` at version `1.0.0`.
+- **Protocol version `v1` → `1.0.0`** across `agent.yaml`, both deploy scripts, `HostedAgentAdvisor`, and Lab 4, matching the [agent.yaml schema reference](https://learn.microsoft.com/azure/foundry/agents/concepts/agent-yaml-reference).
+- **Missing `knownissues.md`.** Lab 4 linked to `knownissues.md` (Issues 2, 3, 6, and a full-list footer) but the file did not exist. Added it with numbered, copy-paste workarounds.
+
+### Changed
+
+- **`api-version` bumped `2025-01-01-preview` → `2025-11-15-preview`** in `appsettings.json`, `FoundryAgentClient`, `run-requests.http`, and Labs 4–5.
+- **`agent.yaml` manifest now references the container image** via a new `image: ${AGENT_IMAGE}` field, and `scripts/deploy-foundry-agent.ps1` accepts `-ImageUri` to fill it in, closing the gap where the manifest deploy path had no image reference.
+- Build verified clean (0 errors) and all 6 tests pass.
+
+### Not changed (recommended follow-ups)
+
+- The `NU1902` OpenTelemetry advisories remain (transitive via the agent-server package). Tracked in `knownissues.md` (Issue 7).
+
 ## 2026-06-02 — Pin Microsoft.Extensions.AI to 10.3.0 in AgentHost and refresh peripheral packages
 
 ### Fixed
