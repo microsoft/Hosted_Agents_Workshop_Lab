@@ -4,6 +4,18 @@ All notable changes to this repository are documented in this file.
 
 The format is based on Keep a Changelog principles.
 
+## 2026-07-01 — .NET smoke test, lab navigation, and cleanup guardrail
+
+### Changed
+
+- **Smoke test rewritten in .NET.** Replaced the Python `deployment/smoke-tests.py` with a .NET console runner at `src/WorkshopLab.SmokeTests` (run via `dotnet run`), so the whole workshop is a single language. Same `deployment/smoke-tests.json` catalog and behavior (`FOUNDRY_TOKEN`/`az` auth, `contains_any/all/none` assertions, `previous_response_id` threading, non-zero exit on failure). The `.github/actions/smoke-test` composite action now sets up .NET and runs the project; Lab 4 documents `dotnet run` instead of `python`.
+- **README leads with `azd ai agent`** as the primary deployment path; the manual ACR/SDK route is presented as optional background.
+- **Sequential navigation across the labs** — each lab ends with a `◀ Previous · 📚 All labs · Next ▶` footer, and the README/labs index link into the sequence, so readers can follow the whole path without jumping between files. Lab 4 gained a "Two ways to deploy" comparison box.
+
+### Fixed
+
+- **Premature teardown guardrail.** Moved the `azd down` cleanup from Lab 4 to the end of Lab 5 and added a stop note in Lab 4, so learners don't delete the deployed agent that Lab 5's UI needs before finishing the workshop.
+
 ## 2026-07-01 — Live deployment validation, non-deprecated model, modern infra, and smoke tests
 
 ### Changed

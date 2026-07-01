@@ -194,7 +194,7 @@ A smoke test posts a few prompts to the deployed agent and checks the replies â€
 Run it locally against your deployed agent:
 
 ```powershell
-python deployment/smoke-tests.py `
+dotnet run --project src/WorkshopLab.SmokeTests -- `
     --project-endpoint "<your-project-endpoint>" `
     --agent-name hosted-agent-readiness-coach
 ```
@@ -238,12 +238,9 @@ The [Smoke Test Hosted Agent](../../.github/workflows/smoke-test.yml) workflow r
 
 ## Clean up resources
 
-> **Warning:** `azd down` permanently deletes everything `azd provision` created. Preview first.
-
-```powershell
-azd down --preview
-azd down
-```
+> â›” **Don't clean up yet.** [Lab 5](../lab-5-ui/lab-5_readme.md) connects a chat UI to this **deployed** agent. If you run `azd down` now, the hosted agent and everything `azd provision` created are deleted, and Lab 5 has nothing to call.
+>
+> Leave the deployment running until you finish Lab 5. The teardown commands live at the end of Lab 5, under [**Clean up resources**](../lab-5-ui/lab-5_readme.md#clean-up-resources).
 
 ---
 

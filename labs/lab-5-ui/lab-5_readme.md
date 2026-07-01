@@ -172,6 +172,21 @@ This lab completes the full path from implementation and deployment to user-faci
 
 ---
 
+## Clean up resources
+
+Now that you have finished all five labs, tear down the Azure resources so they stop incurring cost. This deletes the hosted agent you deployed in Lab 4 and everything `azd provision` created.
+
+> **Warning:** `azd down` permanently deletes everything `azd provision` created. Preview first, then confirm.
+
+```powershell
+azd down --preview
+azd down
+```
+
+> To also purge soft-deleted resources (for example the Foundry account) so their names are immediately reusable, run `azd down --purge`.
+
+---
+
 **Navigation:** [◀ Lab 4 — Deploy](../lab-4-deploy/lab-4_readme.md) · [📚 All labs](../README.md) · [🏠 Workshop home](../../README.md)
 
 🎉 **You've finished the workshop.** Head back to the [main README](../../README.md) for next steps and cleanup.

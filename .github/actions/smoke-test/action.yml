@@ -1,7 +1,8 @@
 name: Smoke-test Foundry Agent
 description: |
   POST a battery of prompts to a deployed hosted agent's Responses endpoint and
-  assert response behaviours from a JSON test catalog. Wraps deployment/smoke-tests.py.
+  assert response behaviours from a JSON test catalog. Runs the .NET smoke-test
+  console app (src/WorkshopLab.SmokeTests).
 
   Contract: the caller must have already run actions/checkout (so the runner
   script and tests file are on disk) and azure/login (the runner uses
@@ -18,10 +19,10 @@ inputs:
     description: Path to the smoke-tests JSON catalog, relative to the repo root
     required: false
     default: 'deployment/smoke-tests.json'
-  script_path:
-    description: Path to the smoke-tests runner script, relative to the repo root
+  project_path:
+    description: Path to the .NET smoke-test project, relative to the repo root
     required: false
-    default: 'deployment/smoke-tests.py'
+    default: 'src/WorkshopLab.SmokeTests'
   timeout:
     description: Per-request timeout in seconds (covers cold-start)
     required: false
@@ -30,16 +31,21 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      with:
+        dotnet-version: "10.0.x"
+
     - name: Run smoke tests
       shell: bash
       env:
         PROJECT_ENDPOINT: ${{ inputs.project_endpoint }}
         AGENT_NAME: ${{ inputs.agent_name }}
         TESTS_FILE: ${{ inputs.tests_file }}
-        SCRIPT_PATH: ${{ inputs.script_path }}
+        PROJECT_PATH: ${{ inputs.project_path }}
         TIMEOUT: ${{ inputs.timeout }}
       run: |
-        python3 "$SCRIPT_PATH" \
+        dotnet run --project "$PROJECT_PATH" -c Release -- \
           --project-endpoint "$PROJECT_ENDPOINT" \
           --agent-name "$AGENT_NAME" \
           --tests-file "$TESTS_FILE" \
