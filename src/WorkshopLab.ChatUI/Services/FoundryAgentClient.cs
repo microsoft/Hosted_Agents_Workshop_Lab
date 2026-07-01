@@ -16,34 +16,27 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
     {
         var endpoint = ResolveProjectEndpoint();
         var agentName = configuration["Foundry:AgentName"] ?? "hosted-agent-readiness-coach";
-        var apiVersion = configuration["Foundry:ApiVersion"] ?? "2025-01-01-preview";
+        var apiVersion = configuration["Foundry:ApiVersion"] ?? "2025-11-15-preview";
 
         var token = await _credential.GetTokenAsync(TokenScope, cancellationToken);
 
+        // Hosted agents are invoked through their dedicated agent endpoint using the
+        // OpenAI Responses protocol. The platform manages conversation history, so the
+        // request body is just the input; no agent_reference is required.
+        var requestUri = $"{endpoint}/agents/{agentName}/endpoint/protocols/openai/responses?api-version={apiVersion}";
+
         var payload = new
         {
-            input = new[]
-            {
-                new
-                {
-                    role = "user",
-                    content = userPrompt
-                }
-            },
-            agent_reference = new
-            {
-                name = agentName,
-                type = "agent_reference"
-            }
+            input = userPrompt,
+            stream = false
         };
 
-        var raw = await SendWithRetryAsync(endpoint, apiVersion, token.Token, payload, cancellationToken);
+        var raw = await SendWithRetryAsync(requestUri, token.Token, payload, cancellationToken);
         return ExtractAssistantText(raw);
     }
 
     private async Task<string> SendWithRetryAsync(
-        string endpoint,
-        string apiVersion,
+        string requestUri,
         string bearerToken,
         object payload,
         CancellationToken cancellationToken)
@@ -54,7 +47,7 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
         {
             try
             {
-                return await SendOnceAsync(endpoint, apiVersion, bearerToken, payload, cancellationToken);
+                return await SendOnceAsync(requestUri, bearerToken, payload, cancellationToken);
             }
             catch (HttpRequestException ex) when (attempt == 1)
             {
@@ -74,15 +67,14 @@ public sealed class FoundryAgentClient(IConfiguration configuration, IHttpClient
     }
 
     private async Task<string> SendOnceAsync(
-        string endpoint,
-        string apiVersion,
+        string requestUri,
         string bearerToken,
         object payload,
         CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}/openai/v1/responses");
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
-        request.Headers.TryAddWithoutValidation("api-version", apiVersion);
+        request.Headers.TryAddWithoutValidation("Foundry-Features", "HostedAgents=V1Preview");
         request.Version = HttpVersion.Version11;
         request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
 

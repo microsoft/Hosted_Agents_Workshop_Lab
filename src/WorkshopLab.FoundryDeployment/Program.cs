@@ -1,139 +1,165 @@
-using Azure.AI.Projects;
+// Hosted-agent deployment helper — OPTIONAL / background path.
+//
+// Registers a hosted-agent version in Microsoft Foundry from a prebuilt container
+// image using the Azure.AI.Projects.Agents SDK (AgentAdministrationClient). The
+// recommended path for real work is the `azd ai agent` extension — see
+// labs/lab-4-deploy/lab-4_readme.md. This tool backs the manual appendix.
+//
+// Two input modes:
+//   1. Structured flags:  --image <uri> [--cpu 1] [--memory 2Gi]
+//                         [--protocol responses] [--protocol-version 1.0.0]
+//                         [--env NAME=VALUE ...]
+//   2. Declarative manifest:  --manifest <agent.yaml> [--set NAME=VALUE ...]
+//      (--set values are substituted into ${NAME} / {{NAME}} placeholders before parsing)
+//
+// Explicit flags override values read from the manifest.
+#pragma warning disable AAIP001 // Hosted agents are an experimental preview feature.
+
+using Azure.AI.Projects.Agents;
 using Azure.Identity;
-using System.ClientModel;
-using System.ClientModel.Primitives;
-using System.Reflection;
 using YamlDotNet.Serialization;
-using System.Text.Json;
 
 var arguments = ParseArguments(args);
 
-string projectEndpoint = GetRequiredValue(arguments, "project-endpoint", "AZURE_AI_PROJECT_ENDPOINT");
-string agentName = GetOptionalValue(arguments, "agent-name", null) ?? Path.GetRandomFileName().Replace(".", "");
-string manifestPath = GetOptionalValue(arguments, "manifest", null);
-string? agentDefinitionJson = GetOptionalValue(arguments, "agent-definition", null);
-string? agentId = GetOptionalValue(arguments, "agent-id", "FOUNDRY_AGENT_ID");
+string projectEndpoint = GetRequired(arguments, "project-endpoint", "AZURE_AI_PROJECT_ENDPOINT");
+string agentName = GetOptional(arguments, "agent-name", null)
+    ?? throw new InvalidOperationException("Missing required '--agent-name'.");
+string? manifestPath = GetOptional(arguments, "manifest", null);
+string foundryFeatures = GetOptional(arguments, "foundry-features", null) ?? "HostedAgents=V1Preview";
 
-var credential = new DefaultAzureCredential();
-var projectClient = new AIProjectClient(new Uri(projectEndpoint), credential);
+// Nullable so we can tell "not supplied" from "supplied": manifest fills gaps, flags win.
+string? image = GetOptional(arguments, "image", null);
+string? cpu = GetOptional(arguments, "cpu", null);
+string? memory = GetOptional(arguments, "memory", null);
+string? protocol = GetOptional(arguments, "protocol", null);
+string? protocolVersion = GetOptional(arguments, "protocol-version", null);
+var environment = new Dictionary<string, string>(StringComparer.Ordinal);
 
-// Get or create the agent definition
-string finalDefinitionJson;
-if (!string.IsNullOrWhiteSpace(agentDefinitionJson))
+if (!string.IsNullOrWhiteSpace(manifestPath))
 {
-    // Use provided agent definition directly
-    finalDefinitionJson = agentDefinitionJson;
-    Console.WriteLine($"Using provided agent definition for agent '{agentName}'");
+    string manifestText = ReadManifestWithSubstitutions(manifestPath, GetMulti(arguments, "set"));
+    ApplyManifest(manifestText, manifestPath, ref image, ref protocol, ref protocolVersion, environment);
 }
-else if (!string.IsNullOrWhiteSpace(manifestPath))
-{
-    // Read and process manifest file
-    string manifest = File.ReadAllText(manifestPath);
 
-    foreach (string replacement in GetMultiValue(arguments, "set"))
+// --env NAME=VALUE flags extend/override manifest environment variables.
+foreach (string pair in GetMulti(arguments, "env"))
+{
+    string[] parts = pair.Split('=', 2, StringSplitOptions.TrimEntries);
+    if (parts.Length == 2 && parts[0].Length > 0)
+    {
+        environment[parts[0]] = parts[1];
+    }
+}
+
+if (string.IsNullOrWhiteSpace(image))
+{
+    throw new InvalidOperationException("A container image is required (use --image or a manifest with template.image).");
+}
+
+cpu ??= "1";
+memory ??= "2Gi";
+protocol ??= "responses";
+protocolVersion ??= "1.0.0";
+
+var protocolVersions = new[] { new ProtocolVersionRecord(ParseProtocol(protocol), protocolVersion) };
+HostedAgentDefinition definition = ProjectsAgentDefinition.CreateHostedAgentDefinition(protocolVersions, cpu, memory);
+definition.ContainerConfiguration = new ContainerConfiguration(image);
+foreach (KeyValuePair<string, string> kv in environment)
+{
+    definition.EnvironmentVariables[kv.Key] = kv.Value;
+}
+
+Console.WriteLine($"Registering hosted agent '{agentName}'");
+Console.WriteLine($"  Project  : {projectEndpoint}");
+Console.WriteLine($"  Image    : {image}");
+Console.WriteLine($"  Resources: cpu={cpu}, memory={memory}");
+Console.WriteLine($"  Protocol : {protocol} {protocolVersion}");
+
+var client = new AgentAdministrationClient(new Uri(projectEndpoint), new DefaultAzureCredential());
+var options = new ProjectsAgentVersionCreationOptions(definition);
+ProjectsAgentVersion version = client.CreateAgentVersion(agentName, options, foundryFeatures: foundryFeatures).Value;
+
+Console.WriteLine($"Created hosted agent '{version.Name}' version {version.Version}.");
+Console.WriteLine("Next: start the container with `az cognitiveservices agent start` (see the Lab 4 appendix).");
+
+static ProjectsAgentProtocol ParseProtocol(string value) => value.Trim().ToLowerInvariant() switch
+{
+    "invocations" => ProjectsAgentProtocol.Invocations,
+    _ => ProjectsAgentProtocol.Responses,
+};
+
+static string ReadManifestWithSubstitutions(string path, IReadOnlyList<string> setValues)
+{
+    string text = File.ReadAllText(path);
+    foreach (string replacement in setValues)
     {
         string[] parts = replacement.Split('=', 2, StringSplitOptions.TrimEntries);
-        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]))
+        if (parts.Length != 2 || parts[0].Length == 0)
         {
             throw new ArgumentException($"Invalid --set value '{replacement}'. Use NAME=VALUE.");
         }
 
-        manifest = manifest
+        text = text
             .Replace($"${{{parts[0]}}}", parts[1], StringComparison.Ordinal)
             .Replace($"{{{{{parts[0]}}}}}", parts[1], StringComparison.Ordinal);
     }
 
-    // Convert YAML to JSON if necessary
-    finalDefinitionJson = NormalizeManifestForApi(manifest, manifestPath);
-    Console.WriteLine($"Using agent definition from manifest '{manifestPath}'");
-}
-else
-{
-    throw new InvalidOperationException("Either --agent-definition or --manifest must be provided.");
+    return text;
 }
 
-// Parse and validate the definition
-JsonDocument docDef = JsonDocument.Parse(finalDefinitionJson);
-string agentKind = docDef.RootElement.TryGetProperty("kind", out JsonElement kindEl) 
-    ? kindEl.GetString() ?? "unknown" 
-    : "unknown";
-
-Console.WriteLine($"Agent Kind: {agentKind}");
-BinaryContent definitionContent = BinaryContent.Create(BinaryData.FromString(finalDefinitionJson));
-
-MethodInfo getAgentsClientMethod = typeof(AIProjectClient).GetMethod(
-    "GetAIProjectAgentsOperationsClient",
-    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("The Azure AI Projects SDK does not expose the agents operations client in this build.");
-
-object agentsClient = getAgentsClientMethod.Invoke(projectClient, null)
-    ?? throw new InvalidOperationException("Failed to create the agents operations client from AIProjectClient.");
-
-var requestOptions = new RequestOptions();
-
-if (string.IsNullOrWhiteSpace(agentId))
+static void ApplyManifest(
+    string manifestText,
+    string manifestPath,
+    ref string? image,
+    ref string? protocol,
+    ref string? protocolVersion,
+    IDictionary<string, string> environment)
 {
-    // Try create with definition if no agent-id provided
-    if (agentKind == "hosted")
-    {
-        await InvokeCreateHostedAgentAsync(agentsClient, agentName, finalDefinitionJson, requestOptions);
-        Console.WriteLine($"Created hosted agent '{agentName}'.");
-    }
-    else
-    {
-        await InvokeManifestMethodAsync(agentsClient, "CreateAgentFromManifestAsync", definitionContent, requestOptions);
-        Console.WriteLine($"Created Foundry agent from definition.");
-    }
-}
-else
-{
-    await InvokeManifestMethodAsync(agentsClient, "UpdateAgentFromManifestAsync", agentId, definitionContent, requestOptions);
-    Console.WriteLine($"Updated Foundry agent '{agentId}' from definition.");
-}
-
-Console.WriteLine("Next step: start the hosted agent container and verify status in the Foundry portal or through Foundry MCP tools.");
-
-static async Task InvokeCreateHostedAgentAsync(object agentsClient, string agentName, string definitionJson, RequestOptions requestOptions)
-{
-    // CreateAgentVersionAsync expects the AgentVersionCreationOptions envelope: {"definition": {...}}
-    // Wrap the raw definition JSON before sending.
-    string wrappedJson = $"{{\"definition\":{definitionJson}}}";
-    BinaryContent wrappedContent = BinaryContent.Create(BinaryData.FromString(wrappedJson));
-
-    // Resolve the (string, BinaryContent, RequestOptions) overload specifically.
-    MethodInfo method = agentsClient.GetType().GetMethod(
-        "CreateAgentVersionAsync",
-        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-        null,
-        new[] { typeof(string), typeof(BinaryContent), typeof(RequestOptions) },
-        null)
-        ?? throw new InvalidOperationException("The agents operations client does not expose CreateAgentVersionAsync(string, BinaryContent, RequestOptions).");
-
-    object? result = method.Invoke(agentsClient, new object[] { agentName, wrappedContent, requestOptions });
-    if (result is Task task)
-    {
-        await task;
-        return;
-    }
-
-    throw new InvalidOperationException("The method 'CreateAgentVersionAsync' did not return a Task as expected.");
-}
-
-static string NormalizeManifestForApi(string manifestContent, string manifestPath)
-{
-    string extension = Path.GetExtension(manifestPath);
-    if (!extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase)
-        && !extension.Equals(".yml", StringComparison.OrdinalIgnoreCase))
-    {
-        return manifestContent;
-    }
-
     var deserializer = new DeserializerBuilder().Build();
-    object yamlModel = deserializer.Deserialize(new StringReader(manifestContent))
-        ?? throw new InvalidOperationException($"Manifest '{manifestPath}' is empty or invalid YAML.");
+    if (deserializer.Deserialize<object>(new StringReader(manifestText)) is not IDictionary<object, object> root)
+    {
+        throw new InvalidOperationException($"Manifest '{manifestPath}' is not a valid YAML mapping.");
+    }
 
-    var serializer = new SerializerBuilder().JsonCompatible().Build();
-    return serializer.Serialize(yamlModel);
+    if (!root.TryGetValue("template", out object? templateObj) || templateObj is not IDictionary<object, object> template)
+    {
+        throw new InvalidOperationException($"Manifest '{manifestPath}' is missing a 'template' block.");
+    }
+
+    if (image is null && template.TryGetValue("image", out object? imageObj) && imageObj is string imageValue && imageValue.Length > 0)
+    {
+        image = imageValue;
+    }
+
+    if (template.TryGetValue("protocols", out object? protocolsObj)
+        && protocolsObj is IList<object> protocols
+        && protocols.Count > 0
+        && protocols[0] is IDictionary<object, object> firstProtocol)
+    {
+        if (protocol is null && firstProtocol.TryGetValue("protocol", out object? pObj) && pObj is string pValue)
+        {
+            protocol = pValue;
+        }
+
+        if (protocolVersion is null && firstProtocol.TryGetValue("version", out object? vObj) && vObj is string vValue)
+        {
+            protocolVersion = vValue;
+        }
+    }
+
+    if (template.TryGetValue("environment_variables", out object? envObj) && envObj is IList<object> envList)
+    {
+        foreach (object entry in envList)
+        {
+            if (entry is IDictionary<object, object> pair
+                && pair.TryGetValue("name", out object? nameObj) && nameObj is string name && name.Length > 0
+                && pair.TryGetValue("value", out object? valueObj) && valueObj is string value
+                && !environment.ContainsKey(name))
+            {
+                environment[name] = value;
+            }
+        }
+    }
 }
 
 static Dictionary<string, List<string>> ParseArguments(string[] args)
@@ -165,15 +191,15 @@ static Dictionary<string, List<string>> ParseArguments(string[] args)
     return parsed;
 }
 
-static string GetRequiredValue(Dictionary<string, List<string>> args, string argName, string envName)
+static string GetRequired(Dictionary<string, List<string>> args, string argName, string envName)
 {
-    string? value = GetOptionalValue(args, argName, envName);
+    string? value = GetOptional(args, argName, envName);
     return !string.IsNullOrWhiteSpace(value)
         ? value
         : throw new InvalidOperationException($"Missing required value '--{argName}' or environment variable '{envName}'.");
 }
 
-static string? GetOptionalValue(Dictionary<string, List<string>> args, string argName, string? envName)
+static string? GetOptional(Dictionary<string, List<string>> args, string argName, string? envName)
 {
     if (args.TryGetValue(argName, out List<string>? values) && values.Count > 0)
     {
@@ -183,22 +209,7 @@ static string? GetOptionalValue(Dictionary<string, List<string>> args, string ar
     return envName is null ? null : Environment.GetEnvironmentVariable(envName);
 }
 
-static IReadOnlyList<string> GetMultiValue(Dictionary<string, List<string>> args, string argName)
+static IReadOnlyList<string> GetMulti(Dictionary<string, List<string>> args, string argName)
 {
     return args.TryGetValue(argName, out List<string>? values) ? values : [];
-}
-
-static async Task InvokeManifestMethodAsync(object target, string methodName, params object[] parameters)
-{
-    MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException($"The agents operations client does not expose '{methodName}'.");
-
-    object? result = method.Invoke(target, parameters);
-    if (result is Task task)
-    {
-        await task;
-        return;
-    }
-
-    throw new InvalidOperationException($"The method '{methodName}' did not return a Task as expected.");
 }

@@ -34,74 +34,55 @@ Content-Type: application/json
 
 # -------------------------------------------------------
 # Production requests via Foundry Agent Service
-# Uses the OpenAI Responses API with agent_reference
+# Each hosted agent has a dedicated endpoint that speaks the OpenAI Responses
+# protocol. The platform manages conversation history, so you send only the
+# input — no agent_reference is required. Preview calls must include the
+# Foundry-Features header.
 #
 # Before sending:
 #   1. Set @projectEndpoint to your Foundry project endpoint (see below)
-#   2. Get a token: az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv
-#   3. Set @token to the value returned by the command above
+#   2. Set @agentName to your deployed agent name
+#   3. Get a token: az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv
+#   4. Set @token to the value returned by the command above
 # -------------------------------------------------------
 
 # Replace with your project endpoint: azd env get-values | Select-String AZURE_AI_PROJECT_ENDPOINT
 @projectEndpoint = https://<account>.services.ai.azure.com/api/projects/<project>
 @agentName = hosted-agent-readiness-coach
+@apiVersion = 2025-11-15-preview
 # Paste the token from: az account get-access-token --resource "https://ai.azure.com" --query accessToken -o tsv
 @token = <paste-bearer-token-here>
 
-POST {{projectEndpoint}}/openai/v1/responses
+POST {{projectEndpoint}}/agents/{{agentName}}/endpoint/protocols/openai/responses?api-version={{apiVersion}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
-api-version: 2025-01-01-preview
+Foundry-Features: HostedAgents=V1Preview
 
 {
-  "input": [
-    {
-      "role": "user",
-      "content": "We are onboarding a team to Microsoft Foundry hosted agents. We need private API access, a repeatable deployment process, and a launch checklist for production readiness. Should we use a hosted agent for this scenario, and what implementation shape do you recommend?"
-    }
-  ],
-  "agent_reference": {
-    "name": "{{agentName}}",
-    "type": "agent_reference"
-  }
+  "input": "We are onboarding a team to Microsoft Foundry hosted agents. We need private API access, a repeatable deployment process, and a launch checklist for production readiness. Should we use a hosted agent for this scenario, and what implementation shape do you recommend?",
+  "stream": false
 }
 
 ###
 
-POST {{projectEndpoint}}/openai/v1/responses
+POST {{projectEndpoint}}/agents/{{agentName}}/endpoint/protocols/openai/responses?api-version={{apiVersion}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
-api-version: 2025-01-01-preview
+Foundry-Features: HostedAgents=V1Preview
 
 {
-  "input": [
-    {
-      "role": "user",
-      "content": "Create a launch checklist for an agent named triage-coach in the pilot environment."
-    }
-  ],
-  "agent_reference": {
-    "name": "{{agentName}}",
-    "type": "agent_reference"
-  }
+  "input": "Create a launch checklist for an agent named triage-coach in the pilot environment.",
+  "stream": false
 }
 
 ###
 
-POST {{projectEndpoint}}/openai/v1/responses
+POST {{projectEndpoint}}/agents/{{agentName}}/endpoint/protocols/openai/responses?api-version={{apiVersion}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
-api-version: 2025-01-01-preview
+Foundry-Features: HostedAgents=V1Preview
 
 {
-  "input": [
-    {
-      "role": "user",
-      "content": "Our container starts, but requests to /responses fail. How should we troubleshoot that?"
-    }
-  ],
-  "agent_reference": {
-    "name": "{{agentName}}",
-    "type": "agent_reference"
-  }
+  "input": "Our container starts, but requests to /responses fail. How should we troubleshoot that?",
+  "stream": false
 }

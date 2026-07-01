@@ -14,11 +14,49 @@
 | Azure CLI | Labs 0, 4, 5 | `az version` |
 | Azure Developer CLI (`azd`) | Lab 4 | `azd version` |
 | Access to a Microsoft Foundry project | Labs 0, 4, 5 | Sign in at [ai.azure.com](https://ai.azure.com/) |
-| A deployed chat model (e.g. `gpt-4.1-mini`) | Labs 0, 4, 5 | Check Foundry → Build → Deployments |
+| A deployed chat model (e.g. `gpt-5.4-mini`) | Labs 0, 4, 5 | Check Foundry → Build → Deployments |
 | GitHub account | Labs 3, 4 | — |
 | Docker Desktop _(optional — cloud build available)_ | Lab 4 local builds only | `docker info` |
 
 > **Tip for beginners:** Labs 0–3 only need .NET 10, Azure CLI, and a Foundry project. You do not need Docker or `azd` until Lab 4.
+
+## Required Azure permissions
+
+This workshop deploys through the **`azd ai agent`** pathway, which provisions a Foundry project and deploys your agent for you. Two different identities are involved — confirm you have the right roles **before Lab 4**.
+
+### You (the person running the labs)
+
+| Scope | Role | Why it's needed |
+|---|---|---|
+| Subscription or resource group | **Contributor** | `azd provision` creates the Foundry account, project, model deployment, container registry, App Insights, and Log Analytics |
+| Subscription or resource group | **Role Based Access Control Administrator** (or **Owner**) | `azd deploy` assigns roles to the agent's managed identity (for example **AcrPull**). Without rights to create role assignments, deployment or the agent's first model call fails |
+| Foundry project | **Azure AI Developer** | Create and update agent versions and model deployments in the project |
+
+Sign in with both CLIs before Lab 4:
+
+```powershell
+az login
+azd auth login
+```
+
+### The agent's managed identity (created automatically)
+
+When your agent is deployed, Foundry gives it its own Microsoft Entra **managed identity**. That identity — not your account — calls the model at runtime, so it needs:
+
+| Scope | Role | Why it's needed |
+|---|---|---|
+| Foundry account | **Cognitive Services OpenAI User** | Lets the running container call the model (`chat/completions`) |
+| Foundry account | **Azure AI Developer** | Lets the container read the project's model connection |
+
+`azd` grants the agent identity **AcrPull** automatically. If your first `azd ai agent invoke` returns `401 PermissionDenied`, grant the two roles above to the agent identity — see [Lab 4 troubleshooting](../lab-4-deploy/lab-4_readme.md#troubleshooting).
+
+### Security best practices for hosted agents
+
+- **Least privilege:** never give the agent's managed identity Owner or Contributor. Scope its roles to the **Foundry account/project**, not the whole subscription.
+- **Separate identities:** keep your operator identity distinct from the agent's runtime identity.
+- **Managed identity, not keys:** the agent authenticates with its Entra identity — no API keys are baked into the image or environment.
+- **Pull-only registry access:** the agent needs **AcrPull** only, never push. Keep the admin user disabled on the container registry (the workshop infrastructure already does this).
+- **Clean up:** run `azd down` when you finish to remove the resources and their role assignments.
 
 ## Steps
 
@@ -38,14 +76,14 @@
 
    ```powershell
    $env:AZURE_AI_PROJECT_ENDPOINT = "https://<resource>.services.ai.azure.com/api/projects/<project>"
-   $env:MODEL_DEPLOYMENT_NAME = "gpt-4.1-mini"
+   $env:MODEL_DEPLOYMENT_NAME = "gpt-5.4-mini"
    ```
 
    **macOS / Linux alternative:**
 
    ```bash
    export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
-   export MODEL_DEPLOYMENT_NAME="gpt-4.1-mini"
+   export MODEL_DEPLOYMENT_NAME="gpt-5.4-mini"
    ```
 
    > **Where to find these values:** Open the [Foundry portal](https://ai.azure.com/), select your project, and copy the endpoint from the project overview page. The model deployment name is listed under **Build → Deployments**.

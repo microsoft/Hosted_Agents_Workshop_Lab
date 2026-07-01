@@ -1,0 +1,46 @@
+name: Smoke-test Foundry Agent
+description: |
+  POST a battery of prompts to a deployed hosted agent's Responses endpoint and
+  assert response behaviours from a JSON test catalog. Wraps deployment/smoke-tests.py.
+
+  Contract: the caller must have already run actions/checkout (so the runner
+  script and tests file are on disk) and azure/login (the runner uses
+  `az account get-access-token` to acquire a Foundry data-plane token).
+
+inputs:
+  project_endpoint:
+    description: Foundry project endpoint URL (e.g. https://<account>.services.ai.azure.com/api/projects/<project>)
+    required: true
+  agent_name:
+    description: Name of the deployed hosted agent to smoke-test
+    required: true
+  tests_file:
+    description: Path to the smoke-tests JSON catalog, relative to the repo root
+    required: false
+    default: 'deployment/smoke-tests.json'
+  script_path:
+    description: Path to the smoke-tests runner script, relative to the repo root
+    required: false
+    default: 'deployment/smoke-tests.py'
+  timeout:
+    description: Per-request timeout in seconds (covers cold-start)
+    required: false
+    default: '120'
+
+runs:
+  using: composite
+  steps:
+    - name: Run smoke tests
+      shell: bash
+      env:
+        PROJECT_ENDPOINT: ${{ inputs.project_endpoint }}
+        AGENT_NAME: ${{ inputs.agent_name }}
+        TESTS_FILE: ${{ inputs.tests_file }}
+        SCRIPT_PATH: ${{ inputs.script_path }}
+        TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        python3 "$SCRIPT_PATH" \
+          --project-endpoint "$PROJECT_ENDPOINT" \
+          --agent-name "$AGENT_NAME" \
+          --tests-file "$TESTS_FILE" \
+          --timeout "$TIMEOUT"

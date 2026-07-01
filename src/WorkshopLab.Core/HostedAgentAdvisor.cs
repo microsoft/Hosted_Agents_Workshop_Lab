@@ -61,7 +61,7 @@ public sealed class HostedAgentAdvisor
         {
             $"1. Confirm the agent name '{normalizedAgentName}' follows hosted-agent naming rules.",
             $"2. Create or verify the '{normalizedEnvironment}' environment variables: AZURE_AI_PROJECT_ENDPOINT and MODEL_DEPLOYMENT_NAME.",
-            "3. Validate that agent.yaml declares kind 'hosted' and protocol 'responses' v1.",
+            "3. Validate that agent.yaml declares kind 'hosted' and protocol 'responses' version 1.0.0.",
             "4. Run the agent locally and send a POST request to /responses before attempting any deployment.",
             "5. Make sure the Dockerfile exposes port 8088 and can build for linux/amd64.",
             "6. Add a CI check that restores, builds, and tests the solution on every pull request.",

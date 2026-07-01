@@ -47,36 +47,39 @@ These tools make the scenario useful for teams who are evaluating or onboarding 
 
 The diagram below shows the end-to-end data flow you will assemble across the six labs.
 
-```text
-┌──────────────┐     HTTPS/JSON      ┌──────────────────────────┐
-│  Chat UI     │ ──────────────────►  │  Microsoft Foundry       │
-│  (Blazor)    │ ◄──────────────────  │  Agent Service           │
-│  Lab 5       │   openai/v1/responses│  (control plane)         │
-└──────────────┘                      └────────┬─────────────────┘
-                                               │ routes to
-                                               ▼
-                                      ┌──────────────────────────┐
-                                      │  Hosted Agent Container  │
-                                      │  (WorkshopLab.AgentHost) │
-                                      │  Port 8088 /responses    │
-                                      │  Labs 0–4                │
-                                      └────────┬─────────────────┘
-                                               │ calls
-                                               ▼
-                                      ┌──────────────────────────┐
-                                      │  Deterministic Tools     │
-                                      │  (WorkshopLab.Core)      │
-                                      │  • RecommendShape        │
-                                      │  • BuildChecklist        │
-                                      │  • Troubleshoot          │
-                                      │  Lab 2                   │
-                                      └──────────────────────────┘
+```mermaid
+flowchart TD
+    UI["💬 Chat UI (Blazor)<br/>Lab 5"]
+    Foundry["☁️ Microsoft Foundry<br/>Agent Service<br/>(control plane)"]
+    Container["📦 Hosted Agent Container<br/>WorkshopLab.AgentHost<br/>Port 8088 · /responses<br/>Labs 0–4"]
+    Tools["🛠️ Deterministic Tools<br/>WorkshopLab.Core<br/>Lab 2"]
+    Recommend["RecommendImplementationShape"]
+    Checklist["BuildLaunchChecklist"]
+    Troubleshoot["TroubleshootHostedAgent"]
+
+    UI -- "HTTPS / JSON<br/>agents/&lt;name&gt;/…/responses" --> Foundry
+    Foundry -- "response" --> UI
+    Foundry -- "routes to" --> Container
+    Container -- "calls" --> Tools
+    Tools --> Recommend
+    Tools --> Checklist
+    Tools --> Troubleshoot
+
+    classDef client fill:#e3f2fd,stroke:#1565c0,color:#0d47a1;
+    classDef cloud fill:#ede7f6,stroke:#5e35b1,color:#311b92;
+    classDef host fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20;
+    classDef core fill:#fff3e0,stroke:#ef6c00,color:#e65100;
+
+    class UI client;
+    class Foundry cloud;
+    class Container host;
+    class Tools,Recommend,Checklist,Troubleshoot core;
 ```
 
 - **Labs 0–1:** Run the agent locally and configure Copilot for the repo.
 - **Lab 2:** Improve one deterministic tool and cover it with tests.
 - **Lab 3:** Validate the build, tests, and container in CI.
-- **Lab 4:** Provision ACR, publish the image, deploy to Foundry, and verify.
+- **Lab 4:** Deploy to Foundry with the `azd ai agent` extension (init → run → provision → deploy → invoke). A manual ACR/SDK route is kept as optional background.
 - **Lab 5:** Connect the Blazor chat UI to the deployed agent.
 
 ## Glossary
@@ -176,7 +179,7 @@ Example PowerShell session:
 
 ```powershell
 $env:AZURE_AI_PROJECT_ENDPOINT = "https://<resource>.services.ai.azure.com/api/projects/<project>"
-$env:MODEL_DEPLOYMENT_NAME = "gpt-4.1-mini"
+$env:MODEL_DEPLOYMENT_NAME = "gpt-5.4-mini"
 ```
 
 ### Run Locally
@@ -238,7 +241,7 @@ Example:
 
 ```powershell
 azd env set AZURE_AI_PROJECT_ENDPOINT "https://<resource>.services.ai.azure.com/api/projects/<project>"
-azd env set MODEL_DEPLOYMENT_NAME "gpt-4.1-mini"
+azd env set MODEL_DEPLOYMENT_NAME "gpt-5.4-mini"
 ```
 
 ## Publish To ACR

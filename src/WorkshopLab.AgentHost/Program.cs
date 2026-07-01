@@ -8,10 +8,18 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using WorkshopLab.Core;
 
-var projectEndpoint = Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
-	?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT is not set.");
+// Endpoint resolution supports both deployment paths:
+//   • azd ai agent  → the platform injects FOUNDRY_PROJECT_ENDPOINT into the container
+//   • manual deploy → AZURE_AI_PROJECT_ENDPOINT is set on the agent definition
+var projectEndpoint = Environment.GetEnvironmentVariable("FOUNDRY_PROJECT_ENDPOINT")
+	?? Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+	?? throw new InvalidOperationException("Set FOUNDRY_PROJECT_ENDPOINT or AZURE_AI_PROJECT_ENDPOINT.");
 
-var deploymentName = Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME") ?? "gpt-4.1-mini";
+// Model deployment name: AZURE_AI_MODEL_DEPLOYMENT_NAME is the azd convention;
+// MODEL_DEPLOYMENT_NAME is used by the manual deploy path.
+var deploymentName = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME")
+	?? Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME")
+	?? "gpt-5.4-mini";
 
 Console.WriteLine($"WorkshopLab Agent Host starting for project: {projectEndpoint}");
 Console.WriteLine($"Using deployment: {deploymentName}");
