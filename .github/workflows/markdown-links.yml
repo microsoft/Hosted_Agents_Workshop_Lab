@@ -38,7 +38,9 @@ jobs:
           for md_file in $md_files; do
             # Extract markdown links: [text](target)
             # Match targets that don't start with http/https/mailto/javascript or are anchor-only
-            grep -oP '\[.+?\]\(\K[^)]+(?=\))' "$md_file" | while read -r target; do
+            # Use process substitution so the while loop runs in the current shell (broken counter
+            # is accessible) and grep exit code 1 (no matches) is suppressed via || true.
+            while IFS= read -r target; do
               # Skip external/special links
               if [[ "$target" =~ ^(https?://|mailto:|javascript:|#) ]]; then
                 continue
@@ -57,9 +59,9 @@ jobs:
 
               if [ -z "$resolved" ] || [ ! -e "$resolved" ]; then
                 echo "❌ BROKEN: $md_file -> $target"
-                ((broken++))
+                broken=$((broken + 1))
               fi
-            done
+            done < <(grep -oP '\[.+?\]\(\K[^)]+(?=\))' "$md_file" 2>/dev/null || true)
           done
 
           if [ $broken -gt 0 ]; then
