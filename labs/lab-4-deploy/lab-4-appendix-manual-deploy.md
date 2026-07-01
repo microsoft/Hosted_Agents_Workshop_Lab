@@ -199,3 +199,7 @@ The Foundry project and hosted-agent definition remain unless deleted separately
 - Container start and running-state verification with the Azure CLI
 
 The main [Lab 4](lab-4_readme.md) collapses all of this into the `azd ai agent` lifecycle. Prefer that path for real work — this appendix is here for background understanding only.
+
+---
+
+**Navigation:** [◀ Back to Lab 4 — Deploy](lab-4_readme.md) · [📚 All labs](../README.md) · [Next: Lab 5 — UI ▶](../lab-5-ui/lab-5_readme.md)

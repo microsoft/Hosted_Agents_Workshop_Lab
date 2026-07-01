@@ -144,6 +144,8 @@ Use the labs in order. Each one builds on the previous one.
 
 For the full lab guide, see [labs/README.md](labs/README.md).
 
+▶ **Ready? Start with [Lab 0 — Microsoft Foundry setup](labs/lab-0-foundry-setup/lab-0_readme.md).** Each lab links to the next, so you can follow the whole sequence end to end.
+
 ## Repository Structure
 
 ```text

@@ -29,3 +29,7 @@
 6. Open a pull request and confirm the workflow passes.
 
 **Expected result:** GitHub Actions validates source, tests, and Hosted Agent container packaging before merge.
+
+---
+
+**Navigation:** [◀ Lab 2 — Implementation shape](../lab-2-implementation-shape/lab-2_readme.md) · [📚 All labs](../README.md) · [Next: Lab 4 — Deploy ▶](../lab-4-deploy/lab-4_readme.md)

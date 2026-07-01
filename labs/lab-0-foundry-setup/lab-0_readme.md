@@ -118,3 +118,7 @@ When your agent is deployed, Foundry gives it its own Microsoft Entra **managed 
 | Port 8088 already in use | Stop any other process using that port, then retry |
 
 **Expected result:** The hosted agent is reachable on `http://localhost:8088/responses` and responds with implementation guidance.
+
+---
+
+**Navigation:** [🏠 Workshop home](../../README.md) · [📚 All labs](../README.md) · [Next: Lab 1 — Copilot config ▶](../lab-1-copilot-config/lab-1_readme.md)

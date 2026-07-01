@@ -10,9 +10,14 @@
 
 **Reference:** [Microsoft Learn — Quickstart: Deploy your first hosted agent (azd)](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd)
 
-> 🧭 **Which path is this?** This lab uses the `azd ai agent` extension, which is the way Microsoft recommends you build and ship hosted agents today. It replaces the older manual steps (provision an ACR by hand, `az acr build`, register with a custom SDK app, `az cognitiveservices agent start`).
->
-> Those manual steps still exist as optional background in **[Lab 4 Appendix — Manual Hosted-Agent Deployment](lab-4-appendix-manual-deploy.md)**. You do **not** need the appendix to finish the workshop — read it later only if you want to see what this tooling automates.
+## Two ways to deploy
+
+| | Path | Best for | Where |
+|---|---|---|---|
+| ✅ **Recommended** | **`azd ai agent` extension** — one tool runs `init → run → provision → deploy → invoke` and automates ACR provisioning, image build/push, and agent registration | Everyone completing the workshop | **This lab (below)** |
+| 🔧 Optional | **Manual ACR + SDK** — provision the registry, `az acr build` the image, register the version with the Foundry SDK, start it with the Azure CLI | Learning the internals, or bring-your-own-CI pipelines | [Lab 4 Appendix — Manual Hosted-Agent Deployment](lab-4-appendix-manual-deploy.md) |
+
+This lab uses the **recommended** path. It replaces the older manual steps (provision an ACR by hand, `az acr build`, register with a custom SDK app, `az cognitiveservices agent start`) with a single guided flow. You do **not** need the appendix to finish the workshop — read it later only if you want to see what the tooling automates.
 
 ---
 
@@ -258,6 +263,12 @@ azd down
 | Anything else | Run `azd ai agent doctor` and follow its suggestions |
 
 > **Full list of documented issues and workarounds:** see [knownissues.md](../../knownissues.md).
+
+---
+
+**Navigation:** [◀ Lab 3 — CI](../lab-3-ci/lab-3_readme.md) · [📚 All labs](../README.md) · [Next: Lab 5 — UI ▶](../lab-5-ui/lab-5_readme.md)
+
+> Optional deep-dive: [Lab 4 Appendix — Manual Hosted-Agent Deployment](lab-4-appendix-manual-deploy.md)
 
 ---
 

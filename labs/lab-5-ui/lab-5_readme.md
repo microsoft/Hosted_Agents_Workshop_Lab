@@ -169,3 +169,9 @@ You now have a working end-to-end solution:
 - Real-time prompt/response flow through the agent's dedicated `agents/<name>/endpoint/protocols/openai/responses` endpoint
 
 This lab completes the full path from implementation and deployment to user-facing experience.
+
+---
+
+**Navigation:** [◀ Lab 4 — Deploy](../lab-4-deploy/lab-4_readme.md) · [📚 All labs](../README.md) · [🏠 Workshop home](../../README.md)
+
+🎉 **You've finished the workshop.** Head back to the [main README](../../README.md) for next steps and cleanup.

@@ -28,3 +28,5 @@ If you are running this in a shared enterprise environment, confirm the learner 
 | [Lab 5](lab-5-ui/lab-5_readme.md) | UI | Build a chat UI and validate end-to-end agent responses |
 
 Each lab is a guided exercise written for beginners and intended to be completed in sequence.
+
+▶ **Start with [Lab 0 — Microsoft Foundry setup](lab-0-foundry-setup/lab-0_readme.md).** Every lab ends with a navigation footer that links to the next one, so you can move straight through without coming back here.

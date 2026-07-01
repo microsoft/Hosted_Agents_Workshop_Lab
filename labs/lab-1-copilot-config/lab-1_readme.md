@@ -29,3 +29,7 @@
 9. Test the configuration by asking Copilot to review `src/WorkshopLab.AgentHost/agent.yaml`.
 
 **Expected result:** Copilot responds with Hosted Agent-aware guidance shaped by your repo instructions and skill.
+
+---
+
+**Navigation:** [◀ Lab 0 — Foundry setup](../lab-0-foundry-setup/lab-0_readme.md) · [📚 All labs](../README.md) · [Next: Lab 2 — Implementation shape ▶](../lab-2-implementation-shape/lab-2_readme.md)

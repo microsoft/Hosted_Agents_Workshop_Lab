@@ -85,3 +85,7 @@ public void RecommendImplementationShape_ReturnsFullStack_WhenAllThreeFlagsAreYe
 9. Confirm the response matches the new deterministic behavior (you should see "full-stack" in the recommendation).
 
 **Expected result:** A real feature change lands in the hosted agent and is covered by tests.
+
+---
+
+**Navigation:** [◀ Lab 1 — Copilot config](../lab-1-copilot-config/lab-1_readme.md) · [📚 All labs](../README.md) · [Next: Lab 3 — CI ▶](../lab-3-ci/lab-3_readme.md)
